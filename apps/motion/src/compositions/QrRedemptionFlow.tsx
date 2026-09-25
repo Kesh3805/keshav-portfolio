@@ -284,6 +284,7 @@ export function QrRedemptionFlow() {
         from={1}
         to={0}
         start={A_REDEEMS}
+        enter={60}
         size={72}
         ease="pop"
         color={frame >= A_REDEEMS ? colors.ok : colors.text}

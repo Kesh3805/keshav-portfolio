@@ -774,6 +774,7 @@ export function RollingNumber({
   weight = 500,
   ease = 'standard',
   glow = false,
+  enter,
 }: {
   x: number;
   y: number;
@@ -792,9 +793,12 @@ export function RollingNumber({
   weight?: number;
   ease?: 'standard' | 'pop';
   glow?: boolean;
+  /** Story frame at which the counter fades in (default: start). */
+  enter?: number;
 }) {
   const colors = useColors();
   const frame = useStoryFrame();
+  const appear = useProgress(enter ?? start, durations.captionFade);
   const pop = usePop(start);
   const clip = useId();
   const linear = interpolate(frame, [start, start + duration], [0, 1], {
@@ -874,7 +878,7 @@ export function RollingNumber({
   }
 
   return (
-    <g filter={glow ? 'url(#glow)' : undefined}>
+    <g filter={glow ? 'url(#glow)' : undefined} opacity={appear}>
       <defs>
         <clipPath id={clip}>
           <rect x={left - 4} y={y - size * 0.82} width={totalW + 8} height={size * 1.02} />
