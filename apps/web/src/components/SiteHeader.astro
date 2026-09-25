@@ -38,8 +38,9 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
     </nav>
 
     <div class="tools">
-      <a class="icon-btn" href={href('/search')} aria-label="Search">
+      <a class="icon-btn search-btn" href={href('/search')} aria-label="Search" aria-keyshortcuts="Control+K Meta+K /" data-palette-open>
         <Search size={16} aria-hidden="true" />
+        <kbd class="search-kbd" aria-hidden="true" data-shortcut>Ctrl K</kbd>
       </a>
       <ThemeToggle />
       <button
@@ -80,6 +81,10 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
 </header>
 
 <script>
+  // Show the platform's modifier in the search shortcut hint.
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  for (const kbd of document.querySelectorAll('[data-shortcut]')) if (mac) kbd.textContent = '⌘K';
+
   const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
   const menu = document.getElementById('mobile-menu');
 
@@ -267,6 +272,35 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
   .icon-btn:hover {
     color: var(--text);
     border-color: var(--line-strong);
+  }
+
+  /* Search opens the command palette; the shortcut hint shows where there is room for it. */
+  .search-kbd {
+    display: none;
+  }
+
+  @media (min-width: 48rem) {
+    .search-btn {
+      display: inline-flex;
+      gap: 0.45rem;
+      width: auto;
+      padding-inline: 0.6rem 0.4rem;
+    }
+
+    .search-btn :global(svg) {
+      grid-area: auto;
+    }
+
+    .search-kbd {
+      display: inline-block;
+      padding: 0.05rem 0.35rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      line-height: 1.4;
+      color: var(--faint);
+    }
   }
 
   .icon-btn :global(svg) {

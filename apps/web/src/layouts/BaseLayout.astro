@@ -7,7 +7,8 @@ import '@fontsource/ibm-plex-sans/500.css';
 import '@fontsource/ibm-plex-sans/600.css';
 import '../styles/global.css';
 import ContentScripts from '../components/ContentScripts.astro';
-import Seo,{ type Props as SeoProps } from '../components/Seo.astro';
+import SearchPalette from '../components/SearchPalette.astro';
+import Seo, { type Props as SeoProps } from '../components/Seo.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import ThemeScript from '../components/ThemeScript.astro';
@@ -36,6 +37,7 @@ export type Props = SeoProps;
       <slot />
     </main>
     <SiteFooter />
+    <SearchPalette />
     <ContentScripts />
     <script>
       // Section reveals: each [data-reveal] block fades up once as it enters the viewport.

@@ -34,36 +34,12 @@ import { href } from '../lib/paths';
 </BaseLayout>
 
 <script>
-  import type { SearchDoc } from './search.json';
+  import { kindLabel, loadIndex, rank, type SearchDoc } from '../lib/search';
 
   const form = document.querySelector<HTMLFormElement>('[data-search]')!;
   const input = form.querySelector<HTMLInputElement>('input')!;
   const status = document.querySelector<HTMLElement>('[data-search-status]')!;
   const list = document.querySelector<HTMLOListElement>('[data-search-results]')!;
-
-  let docs: SearchDoc[] | undefined;
-  const load = async (): Promise<SearchDoc[]> =>
-    (docs ??= (await fetch(form.dataset.index!).then((r) => r.json())) as SearchDoc[]);
-
-  const fields = (d: SearchDoc) => [
-    [d.title, 8],
-    [d.tags.join(' '), 5],
-    [d.headings.join(' '), 3],
-    [d.description, 2],
-  ] as const;
-
-  const score = (doc: SearchDoc, terms: string[]) => {
-    let total = 0;
-    for (const term of terms) {
-      let best = 0;
-      for (const [text, weight] of fields(doc)) {
-        if (text.toLowerCase().includes(term)) best = Math.max(best, weight);
-      }
-      if (best === 0) return 0; // every term must match somewhere
-      total += best;
-    }
-    return total;
-  };
 
   const render = (results: SearchDoc[], query: string) => {
     list.replaceChildren(
@@ -74,8 +50,7 @@ import { href } from '../lib/paths';
         a.textContent = doc.title;
         const meta = document.createElement('span');
         meta.className = 'meta';
-        meta.textContent =
-          doc.type === 'writing' ? 'Writing' : doc.category === 'professional' ? 'Professional project' : 'Personal project';
+        meta.textContent = kindLabel(doc);
         const p = document.createElement('p');
         p.textContent = doc.description;
         li.append(meta, a, p);
@@ -94,14 +69,7 @@ import { href } from '../lib/paths';
     else params.delete('q');
     history.replaceState(null, '', `${location.pathname}${params.size ? `?${params}` : ''}`);
     if (!query) return render([], '');
-    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-    const all = await load();
-    const results = all
-      .map((doc) => ({ doc, s: score(doc, terms) }))
-      .filter((r) => r.s > 0)
-      .sort((a, b) => b.s - a.s)
-      .map((r) => r.doc);
-    render(results, query);
+    render(rank(await loadIndex(form.dataset.index!), query), query);
   };
 
   form.addEventListener('submit', (event) => event.preventDefault());
