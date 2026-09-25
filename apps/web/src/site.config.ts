@@ -10,7 +10,8 @@ export const site = {
     // Rendered only when set. Fill these in rather than inventing them.
     linkedin: 'https://www.linkedin.com/in/keshav-ashokkumar/' as string | undefined,
     email: 'amkeshav382005@gmail.com' as string | undefined,
-    // An absolute URL, or a site path such as '/keshav-resume.pdf' (the base path is added for you).
+    // Drop the file at public/resume.pdf and set '/resume.pdf', or use an absolute URL.
+    // Site paths get the base path and a download filename; the link check fails if the file is missing.
     resume: undefined as string | undefined,
   },
   stats: [{ value: '83', label: 'public repositories' }],

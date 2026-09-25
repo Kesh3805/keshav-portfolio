@@ -1,14 +1,15 @@
 ---
-import { ArrowRight, ArrowUpRight, Mail } from '@lucide/astro';
+import { ArrowRight } from '@lucide/astro';
 import { getCollection, getEntry, render } from 'astro:content';
 import ProjectCard from '../components/ProjectCard.astro';
+import RoleTimeline from '../components/RoleTimeline.astro';
 import SectionHeader from '../components/SectionHeader.astro';
 import MetricValue from '../components/MetricValue.astro';
 import SystemDiagram from '../components/SystemDiagram.astro';
 import WritingList from '../components/WritingList.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getArticles, getExperience, getProjects, getProjectsBySlug } from '../lib/content';
-import { href } from '../lib/paths';
+import { downloadName, href, linkHref } from '../lib/paths';
 import { site } from '../site.config';
 
 const projects = await getProjects();
@@ -69,30 +70,37 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
           </a>
           <a class="btn" href={href('/writing')}>Read Writing</a>
         </div>
+        <!-- One quiet line of ways to reach me, so nothing competes with the two CTAs. -->
         <ul class="reach" aria-label="Contact">
           {
             site.links.linkedin && (
               <li>
-                <a class="chip" href={site.links.linkedin} rel="me noopener">
-                  LinkedIn <ArrowUpRight size={14} aria-hidden="true" />
-                </a>
+                <a class="link" href={site.links.linkedin} rel="me noopener">LinkedIn</a>
               </li>
             )
           }
           {
             site.links.email && (
               <li>
-                <a class="chip" href={`mailto:${site.links.email}`}>
-                  <Mail size={14} aria-hidden="true" /> Email
-                </a>
+                <a class="link" href={`mailto:${site.links.email}`}>Email</a>
               </li>
             )
           }
           <li>
-            <a class="link github" href={site.links.github} rel="me noopener">
-              github.com/Kesh3805 · {site.stats[0]?.value} {site.stats[0]?.label}
-            </a>
+            <a class="link" href={site.links.github} rel="me noopener">GitHub</a>
+            <span class="count"> · {site.stats[0]?.value} repos</span>
           </li>
+          {
+            site.links.resume && (
+              <li>
+                <a
+                  class="link"
+                  href={linkHref(site.links.resume)}
+                  download={downloadName(site.links.resume, 'Keshav_Resume.pdf')}
+                >Résumé</a>
+              </li>
+            )
+          }
         </ul>
       </div>
       <div class="hero-visual">
@@ -167,9 +175,13 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
         </SectionHeader>
         <div class="experience">
           <div>
-            <p class="meta">{experience.data.employmentType}</p>
+            <p class="meta">
+              {experience.data.employmentType}
+              {experience.data.period && <span class="period"> · {experience.data.period}</span>}
+            </p>
             <h3>{experience.data.role}</h3>
             <p class="company">{experience.data.company}</p>
+            <RoleTimeline timeline={experience.data.timeline} />
           </div>
           <div>
             <p class="experience-desc">{experience.data.description}</p>
@@ -243,7 +255,8 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
             <li>
               <a
                 class="btn"
-                href={/^https?:/.test(site.links.resume) ? site.links.resume : href(site.links.resume)}
+                href={linkHref(site.links.resume)}
+                download={downloadName(site.links.resume, 'Keshav_Resume.pdf')}
               >
                 Résumé
               </a>
@@ -336,42 +349,29 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     margin-top: 2.1rem;
   }
 
-  /* Secondary row: ways to reach me, quieter than the primary CTAs. */
+  /* Secondary line: ways to reach me, set in the metadata voice. */
   .reach {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 0.9rem;
-    margin-top: 1rem;
-  }
-
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.7rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--surface-raised);
-    box-shadow: var(--bevel);
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--muted);
-    text-decoration: none;
-    transition:
-      border-color var(--dur-micro) var(--ease),
-      color var(--dur-micro) var(--ease);
-  }
-
-  .chip:hover {
-    border-color: var(--accent);
-    color: var(--text);
-  }
-
-  .github {
+    align-items: baseline;
+    margin-top: 1.1rem;
     font-family: var(--font-mono);
     font-size: 0.8rem;
     color: var(--muted);
+  }
+
+  .reach li + li::before {
+    content: '·';
+    margin-inline: 0.6rem;
+    color: var(--faint);
+  }
+
+  .reach a:hover {
+    color: var(--text);
+  }
+
+  .count {
+    color: var(--faint);
   }
 
   .hero-visual {

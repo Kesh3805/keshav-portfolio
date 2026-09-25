@@ -21,3 +21,11 @@ function splitSuffix(path: string): [string, string?] {
 
 /** Site-aware helper for components. */
 export const href = (path: string) => withBase(path, import.meta.env.BASE_URL);
+
+const isAbsolute = (url: string) => /^[a-z][a-z0-9+.-]*:/i.test(url);
+
+/** A configured link that may be an absolute URL or a site path (e.g. the résumé). */
+export const linkHref = (url: string) => (isAbsolute(url) ? url : href(url));
+
+/** A site-hosted file gets a download filename; an external URL opens normally. */
+export const downloadName = (url: string, name: string) => (isAbsolute(url) ? undefined : name);

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { withBase } from '../src/lib/paths';
+import { downloadName, linkHref, withBase } from '../src/lib/paths';
+
+describe('configured links', () => {
+  it('passes absolute URLs through and only names downloads for site files', () => {
+    expect(linkHref('https://example.com/cv.pdf')).toBe('https://example.com/cv.pdf');
+    expect(linkHref('mailto:someone@example.com')).toBe('mailto:someone@example.com');
+    expect(linkHref('/resume.pdf')).toMatch(/\/resume\.pdf$/);
+    expect(downloadName('https://example.com/cv.pdf', 'x.pdf')).toBeUndefined();
+    expect(downloadName('/resume.pdf', 'Keshav_Resume.pdf')).toBe('Keshav_Resume.pdf');
+  });
+});
 
 describe('withBase', () => {
   const base = '/keshav-portfolio';

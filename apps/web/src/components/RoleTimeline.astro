@@ -1,0 +1,81 @@
+---
+// Progression at one employer, oldest → newest: "Intern (Aug 2025 — Apr 2026) → Software Engineer (May 2026 — Present)".
+// Renders nothing for a single role.
+interface Entry {
+  role: string;
+  employmentType: string;
+  period: string;
+}
+
+interface Props {
+  timeline: Entry[];
+}
+
+const steps = [...Astro.props.timeline].reverse();
+---
+
+{
+  steps.length > 1 && (
+    <ol class="trail" aria-label="Role progression">
+      {steps.map((step, i) => (
+        <li class:list={{ current: i === steps.length - 1 }}>
+          <span class="role">{step.role}</span>
+          <span class="period">
+            {step.employmentType} · {step.period}
+          </span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+<style>
+  .trail {
+    display: grid;
+    gap: 0.55rem;
+    margin-top: 1rem;
+    padding-left: 0.9rem;
+    border-left: 1px solid var(--line-strong);
+  }
+
+  li {
+    position: relative;
+    display: grid;
+    gap: 0.1rem;
+  }
+
+  /* A node on the rail; the current role is the lit one. */
+  li::before {
+    content: '';
+    position: absolute;
+    left: calc(-0.9rem - 4px);
+    top: 0.45rem;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+  }
+
+  li.current::before {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+
+  .role {
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .current .role {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .period {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--faint);
+  }
+</style>

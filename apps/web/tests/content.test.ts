@@ -118,6 +118,16 @@ describe('cross references', () => {
     }
   });
 
+  it('experience timeline leads with the current role and tenure', () => {
+    for (const e of experience) {
+      const timeline = (e.data.timeline ?? []) as { role: string; period: string }[];
+      if (!timeline.length) continue;
+      expect(timeline[0]!.role, e.file).toBe(e.data.role);
+      expect(timeline[0]!.period, e.file).toBe(e.data.period);
+      expect(timeline[0]!.period, e.file).toMatch(/Present$/);
+    }
+  });
+
   it('homepage areas reference existing projects', () => {
     for (const area of areas) {
       for (const slug of area.projects) expect(projectSlugs, area.id).toContain(slug);

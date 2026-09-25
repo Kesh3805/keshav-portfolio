@@ -53,12 +53,24 @@ const writing = defineCollection({
   }),
 });
 
+// One role held at an employer.
+const timelineEntry = z.object({
+  role: z.string().min(1),
+  employmentType: z.string().min(1),
+  period: z.string().min(1),
+});
+
 const experience = defineCollection({
   loader: glob({ pattern: '**/*.md', base: `${CONTENT}/experience` }),
   schema: z.object({
     company: z.string().min(1),
+    /** Current role at this employer. */
     role: z.string().min(1),
     employmentType: z.string().optional(),
+    /** Tenure in the current role, e.g. "May 2026 — Present". */
+    period: z.string().optional(),
+    /** Progression at this employer, newest first. */
+    timeline: z.array(timelineEntry).default([]),
     description: z.string().min(20),
     projects: z.array(slug).min(1),
   }),

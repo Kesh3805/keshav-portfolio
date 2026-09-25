@@ -1,5 +1,5 @@
 ---
-import { href } from '../lib/paths';
+import { downloadName, href, linkHref } from '../lib/paths';
 import { site } from '../site.config';
 ---
 
@@ -14,6 +14,19 @@ import { site } from '../site.config';
       <li><a class="link" href={site.links.github} rel="me noopener">GitHub</a></li>
       {site.links.linkedin && <li><a class="link" href={site.links.linkedin} rel="me noopener">LinkedIn</a></li>}
       {site.links.email && <li><a class="link" href={`mailto:${site.links.email}`}>Email</a></li>}
+      {
+        site.links.resume && (
+          <li>
+            <a
+              class="link"
+              href={linkHref(site.links.resume)}
+              download={downloadName(site.links.resume, 'Keshav_Resume.pdf')}
+            >
+              Résumé
+            </a>
+          </li>
+        )
+      }
     </ul>
   </div>
 </footer>
