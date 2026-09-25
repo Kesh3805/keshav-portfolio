@@ -28,6 +28,7 @@ motion: questqr-scan-flow
 metrics:
   - value: '90%+'
     label: statement coverage across modules
+    highlight: true
   - value: 'Redis lock'
     label: atomic inventory decrement against double redemption
 ---

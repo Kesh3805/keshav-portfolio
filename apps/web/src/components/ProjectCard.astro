@@ -19,9 +19,11 @@ const hidden = technologies.length - visible.length;
 const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) : [];
 ---
 
-<article class="card">
+<article class="card" data-spotlight>
   {
-    posters.map((v) => (
+    posters.length > 0 && (
+      <div class="poster-frame">
+        {posters.map((v) => (
       <img
         class="poster"
         src={v.poster}
@@ -32,7 +34,9 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
         decoding="async"
         data-variant={posters.length > 1 ? v.theme : undefined}
       />
-    ))
+        ))}
+      </div>
+    )
   }
   <div class="top">
     <span class="category" data-category={category}>
@@ -57,9 +61,33 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
   {motion && !posters.length && <span class="meta has-motion">◧ motion diagram</span>}
 </article>
 
+<script>
+  // One delegated listener feeds pointer position to whichever card is under the cursor.
+  const fine = matchMedia('(hover: hover) and (pointer: fine)');
+  let frame = 0;
+  document.addEventListener(
+    'pointermove',
+    (event) => {
+      if (!fine.matches || frame) return;
+      const card = (event.target as Element | null)?.closest<HTMLElement>('[data-spotlight]');
+      if (!card) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty('--mx', `${event.clientX - rect.left}px`);
+        card.style.setProperty('--my', `${event.clientY - rect.top}px`);
+      });
+    },
+    { passive: true },
+  );
+</script>
+
 <style>
   .card {
+    --mx: 50%;
+    --my: 0%;
     position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     gap: 0.9rem;
@@ -67,27 +95,87 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: var(--surface);
+    box-shadow: var(--bevel), var(--shadow-1);
     transition:
-      border-color 180ms var(--ease),
-      transform 180ms var(--ease);
+      border-color 220ms var(--ease),
+      box-shadow 260ms var(--ease),
+      transform 260ms var(--ease-out);
   }
 
-  .card:hover,
+  /* Cursor spotlight (fill) and a brighter rim that follows it (border). */
+  .card::before,
+  .card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 260ms var(--ease);
+  }
+
+  .card::before {
+    z-index: -1;
+    background: radial-gradient(
+      26rem circle at var(--mx) var(--my),
+      var(--spotlight),
+      transparent 55%
+    );
+  }
+
+  .card::after {
+    padding: 1px;
+    background: radial-gradient(
+      22rem circle at var(--mx) var(--my),
+      color-mix(in srgb, var(--accent) 55%, transparent),
+      transparent 60%
+    );
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .card:hover {
+      border-color: var(--line-strong);
+      box-shadow: var(--bevel), var(--shadow-3);
+      transform: translateY(-3px);
+    }
+
+    .card:hover::before,
+    .card:hover::after {
+      opacity: 1;
+    }
+
+    .card:active {
+      transform: translateY(-1px) scale(0.995);
+      transition-duration: 80ms;
+    }
+
+    .card:hover .poster {
+      transform: scale(1.025);
+    }
+  }
+
   .card:focus-within {
     border-color: var(--line-strong);
-    transform: translateY(-2px);
+  }
+
+  .poster-frame {
+    margin: -1.4rem -1.4rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+    border-radius: var(--radius) var(--radius) 0 0;
+    overflow: hidden;
   }
 
   .poster {
     display: block;
-    width: calc(100% + 2.8rem);
-    max-width: none;
+    width: 100%;
     height: auto;
     aspect-ratio: 16 / 9;
     object-fit: cover;
-    margin: -1.4rem -1.4rem 0.25rem;
-    border-bottom: 1px solid var(--line);
-    border-radius: var(--radius) var(--radius) 0 0;
+    transition: transform 600ms var(--ease-out);
   }
 
   .top {
@@ -131,12 +219,12 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
     color: var(--faint);
     transition:
       color 180ms var(--ease),
-      transform 180ms var(--ease);
+      transform 220ms var(--ease-out);
   }
 
   .card:hover .arrow {
     color: var(--accent);
-    transform: translate(2px, -2px);
+    transform: translate(3px, -3px);
   }
 
   .description {
@@ -158,5 +246,14 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
 
   .has-motion {
     font-size: 0.68rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card,
+    .card:hover,
+    .card:active,
+    .card:hover .poster {
+      transform: none;
+    }
   }
 </style>

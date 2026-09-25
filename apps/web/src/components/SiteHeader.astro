@@ -8,9 +8,11 @@ const current = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$
 const isActive = (path: string) => current === path || current.startsWith(`${path}/`);
 ---
 
-<header class="site-header">
+<header class="site-header" data-site-header>
   <a class="skip sr-only-focusable" href="#main">Skip to content</a>
-  <div class="container-page bar">
+  <div class="container-page shell">
+  <div class="island">
+  <div class="bar">
     <a class="wordmark" href={href('/')}>
       <span class="mark" aria-hidden="true">k/</span>
       <span>{site.name}</span>
@@ -55,7 +57,7 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
   </div>
 
   <nav id="mobile-menu" class="mobile" aria-label="Mobile" hidden>
-    <ul class="container-page">
+    <ul>
       {
         nav.map((item) => (
           <li>
@@ -73,6 +75,8 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
       </li>
     </ul>
   </nav>
+  </div>
+  </div>
 </header>
 
 <script>
@@ -97,6 +101,13 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
   matchMedia('(min-width: 48rem)').addEventListener('change', (event) => {
     if (event.matches) setOpen(false);
   });
+
+  // The island firms up (denser glass, stronger shadow) once content scrolls beneath it.
+  // toggleAttribute is a no-op when the state doesn't change, so this stays cheap per event.
+  const header = document.querySelector<HTMLElement>('[data-site-header]');
+  const syncScrolled = () => header?.toggleAttribute('data-scrolled', window.scrollY > 8);
+  syncScrolled();
+  window.addEventListener('scroll', syncScrolled, { passive: true });
 </script>
 
 <style>
@@ -104,9 +115,37 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
     position: sticky;
     top: 0;
     z-index: 20;
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
-    backdrop-filter: saturate(1.2) blur(8px);
-    border-bottom: 1px solid var(--line);
+    padding-top: 0.75rem;
+    pointer-events: none;
+  }
+
+  /* Fade content out as it passes above and behind the floating island. */
+  .site-header::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 -0.75rem;
+    z-index: -1;
+    background: linear-gradient(180deg, var(--bg) 35%, transparent);
+    pointer-events: none;
+  }
+
+  .island {
+    pointer-events: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface-glass);
+    backdrop-filter: saturate(1.5) blur(14px);
+    box-shadow: var(--bevel), var(--shadow-1);
+    transition:
+      box-shadow 240ms var(--ease),
+      border-color 240ms var(--ease),
+      background-color 240ms var(--ease);
+  }
+
+  .site-header[data-scrolled] .island {
+    border-color: var(--line-strong);
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+    box-shadow: var(--bevel), var(--shadow-3);
   }
 
   .skip {
@@ -118,13 +157,15 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
     color: var(--accent-ink);
     border-radius: var(--radius);
     z-index: 30;
+    pointer-events: auto;
   }
 
   .bar {
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    height: 3.75rem;
+    height: 3.25rem;
+    padding-inline: 1rem 0.5rem;
   }
 
   .wordmark {
@@ -140,6 +181,7 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
     font-family: var(--font-mono);
     font-weight: 500;
     color: var(--accent);
+    text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
   }
 
   .primary {
@@ -148,7 +190,7 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
 
   .primary ul {
     display: flex;
-    gap: 0.25rem;
+    gap: 0.15rem;
   }
 
   .primary a,
@@ -158,41 +200,68 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
     gap: 0.5rem;
     text-decoration: none;
     color: var(--muted);
-    transition: color 160ms var(--ease);
+    transition:
+      color 160ms var(--ease),
+      background-color 160ms var(--ease),
+      box-shadow 160ms var(--ease);
   }
 
   .primary a {
-    font-size: 0.92rem;
-    padding: 0.4rem 0.65rem;
-    border-radius: var(--radius);
+    font-size: 0.9rem;
+    padding: 0.38rem 0.7rem;
+    border-radius: 999px;
   }
 
-  .primary a:hover,
+  .primary a:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface-raised) 70%, transparent);
+  }
+
   .mobile a:hover {
     color: var(--text);
   }
 
-  .primary a[aria-current='page'],
+  .primary a[aria-current='page'] {
+    color: var(--text);
+    background: var(--surface-raised);
+    box-shadow:
+      var(--bevel),
+      0 0 0 1px var(--line),
+      inset 0 -1px 0 color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+
   .mobile a[aria-current='page'] {
     color: var(--text);
-    box-shadow: inset 0 -1px 0 var(--accent);
+  }
+
+  .mobile a[aria-current='page']::before {
+    content: '';
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
   }
 
   .tools {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
 
   .icon-btn {
     display: inline-grid;
     place-items: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.15rem;
+    height: 2.15rem;
     border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border-radius: 999px;
     color: var(--muted);
-    background: transparent;
+    background: var(--surface-raised);
+    box-shadow: var(--bevel);
     cursor: pointer;
+    transition:
+      color 160ms var(--ease),
+      border-color 160ms var(--ease);
   }
 
   .icon-btn:hover {
@@ -204,6 +273,14 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
     grid-area: 1 / 1;
   }
 
+  .tools :global(.theme-toggle) {
+    border-radius: 999px;
+    width: 2.15rem;
+    height: 2.15rem;
+    background: var(--surface-raised);
+    box-shadow: var(--bevel);
+  }
+
   .menu-btn[aria-expanded='false'] .menu-close,
   .menu-btn[aria-expanded='true'] .menu-open {
     display: none;
@@ -211,22 +288,28 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
 
   .mobile {
     border-top: 1px solid var(--line);
-    background: var(--bg);
   }
 
   .mobile ul {
     display: grid;
-    padding-block: 0.5rem 1rem;
+    padding: 0.35rem 1rem 0.75rem;
+  }
+
+  .mobile li + li a {
+    border-top: 1px solid var(--line);
   }
 
   .mobile a {
     width: 100%;
-    padding: 0.8rem 0;
+    padding: 0.8rem 0.25rem;
     font-size: 1.05rem;
-    border-bottom: 1px solid var(--line);
   }
 
   @media (max-width: 47.99rem) {
+    .shell {
+      padding-inline: 0.75rem;
+    }
+
     .primary {
       display: none;
     }

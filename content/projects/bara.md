@@ -28,6 +28,7 @@ motion: bara-memory-architecture
 metrics:
   - value: '41'
     label: deterministic decision gates
+    highlight: true
   - value: '50+'
     label: tunable thresholds
   - value: '5,000+'

@@ -39,8 +39,10 @@ motion: fintax-architecture
 metrics:
   - value: '3,000ms+ → <15ms'
     label: GST returns query latency at peak load
+    highlight: true
   - value: '3,668 / 434'
     label: unit / E2E tests maintained
+    highlight: true
   - value: '34 → 0'
     label: dependency vulnerabilities remediated
   - value: '26 → 1'

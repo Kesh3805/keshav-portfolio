@@ -1,0 +1,65 @@
+---
+// Renders a metric value. "before → after" values become a large result with
+// the baseline shown small and struck through, so the change reads at a glance.
+interface Props {
+  value: string;
+  size?: 'md' | 'lg';
+}
+
+const { value, size = 'md' } = Astro.props;
+const [before, after] = value.split(/\s*→\s*/);
+const isDelta = after !== undefined;
+---
+
+<span class:list={['metric-value', size]}>
+  {
+    isDelta ? (
+      <>
+        <span class="result">{after}</span>
+        <span class="baseline">
+          <span class="sr-only">from </span>
+          <s>{before}</s>
+        </span>
+      </>
+    ) : (
+      <span class="result">{value}</span>
+    )
+  }
+</span>
+
+<style>
+  .metric-value {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.6rem;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .result {
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .md .result {
+    font-size: 1.45rem;
+  }
+
+  .lg .result {
+    font-size: clamp(1.6rem, 2.6vw, 1.95rem);
+  }
+
+  .baseline {
+    font-size: 0.8rem;
+    color: var(--faint);
+    white-space: nowrap;
+  }
+
+  .baseline s {
+    text-decoration-color: color-mix(in srgb, var(--error) 70%, transparent);
+    text-decoration-thickness: 1.5px;
+  }
+</style>

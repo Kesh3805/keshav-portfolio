@@ -3,6 +3,7 @@ import { ArrowRight } from '@lucide/astro';
 import { getCollection, getEntry, render } from 'astro:content';
 import ProjectCard from '../components/ProjectCard.astro';
 import SectionHeader from '../components/SectionHeader.astro';
+import MetricValue from '../components/MetricValue.astro';
 import SystemDiagram from '../components/SystemDiagram.astro';
 import WritingList from '../components/WritingList.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
@@ -14,6 +15,12 @@ const projects = await getProjects();
 const featured = projects.filter((p) => p.data.featured);
 const professional = projects.filter((p) => p.data.category === 'professional');
 const personal = projects.filter((p) => p.data.category === 'personal');
+const hud = projects.flatMap((project) =>
+  project.data.metrics.filter((m) => m.highlight).map((metric) => ({ metric, project })),
+);
+
+// Two-tone headline: the claim, then the qualifier.
+const [headlineLead, headlineRest] = site.headline.split(/ (?=and )/);
 
 const [experience] = await getExperience();
 const experienceProjects = experience ? await getProjectsBySlug(experience.data.projects) : [];
@@ -41,8 +48,16 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
   <section class="hero grid-backdrop" aria-labelledby="hero-title">
     <div class="container-page hero-inner">
       <div class="hero-copy">
-        <p class="meta hero-kicker">Keshav · Software Engineer · jpteam / C1X Inc.</p>
-        <h1 id="hero-title">{site.headline}</h1>
+        <p class="kicker">
+          <span class="pulse" aria-hidden="true"></span>
+          <span>Software Engineer</span>
+          <span class="sep" aria-hidden="true">/</span>
+          <span>jpteam · C1X Inc.</span>
+        </p>
+        <h1 id="hero-title">
+          <span class="lead">{headlineLead}</span>
+          {headlineRest && <span class="rest"> {headlineRest}</span>}
+        </h1>
         <p class="lede">
           Production backends for GST compliance, document AI and real-time workflows at work.
           Retrieval gating, content forensics and review tooling on my own time. This site is where
@@ -53,27 +68,37 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
             Explore Work <ArrowRight size={16} aria-hidden="true" />
           </a>
           <a class="btn" href={href('/writing')}>Read Writing</a>
-          <a class="link github" href={site.links.github} rel="me noopener">github.com/Kesh3805</a>
+          <a class="link github" href={site.links.github} rel="me noopener">
+            github.com/Kesh3805 · {site.stats[0]?.value} {site.stats[0]?.label}
+          </a>
         </div>
-        <dl class="stats">
-          {
-            site.stats.map((stat) => (
-              <div>
-                <dt class="meta">{stat.label}</dt>
-                <dd>{stat.value}</dd>
-              </div>
-            ))
-          }
-          <div>
-            <dt class="meta">projects documented</dt>
-            <dd>{professional.length} + {personal.length}</dd>
-          </div>
-        </dl>
       </div>
       <div class="hero-visual">
         <SystemDiagram />
       </div>
     </div>
+
+    {
+      hud.length > 0 && (
+        <div class="container-page hud-wrap">
+          <p class="meta hud-caption">
+            Figures from the work · {professional.length} professional + {personal.length} personal
+            projects
+          </p>
+          <ul class="hud">
+            {hud.map(({ metric, project }) => (
+              <li class="hud-card">
+                <MetricValue value={metric.value} />
+                <span class="hud-label">{metric.label}</span>
+                <a class="hud-source" href={href(`/projects/${project.data.slug}`)}>
+                  {project.data.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )
+    }
   </section>
 
   <section class="container-page block" aria-labelledby="selected-work">
@@ -206,36 +231,93 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
 <style>
   .hero {
     border-bottom: 1px solid var(--line);
+    padding-bottom: clamp(2.5rem, 6vw, 4rem);
   }
 
   .hero-inner {
     display: grid;
     gap: 3rem;
-    padding-block: clamp(3rem, 8vw, 6rem) clamp(2.5rem, 6vw, 4.5rem);
+    padding-block: clamp(3rem, 7vw, 5.5rem) clamp(2rem, 4vw, 3rem);
     align-items: center;
   }
 
   @media (min-width: 60rem) {
     .hero-inner {
-      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
     }
   }
 
-  .hero-kicker {
-    margin-bottom: 1.25rem;
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 1.5rem;
+    padding: 0.35rem 0.8rem 0.35rem 0.65rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-raised);
+    box-shadow: var(--bevel), var(--shadow-1);
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+
+  .sep {
+    color: var(--faint);
+  }
+
+  .pulse {
+    position: relative;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 10px var(--ok);
+  }
+
+  .pulse::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 1px solid var(--ok);
+    animation: ping 2.4s var(--ease-out) infinite;
+  }
+
+  @keyframes ping {
+    0% {
+      transform: scale(0.6);
+      opacity: 0.8;
+    }
+    80%,
+    100% {
+      transform: scale(1.8);
+      opacity: 0;
+    }
   }
 
   h1 {
-    font-size: clamp(2.1rem, 5.2vw, 3.6rem);
-    letter-spacing: -0.035em;
-    line-height: 1.04;
-    max-width: 20ch;
+    font-size: clamp(2.3rem, 5.6vw, 4rem);
+    font-weight: 600;
+    letter-spacing: -0.042em;
+    line-height: 1.02;
+    max-width: 17ch;
+  }
+
+  .lead {
+    color: var(--text);
+  }
+
+  .rest {
+    color: color-mix(in srgb, var(--text) 52%, var(--bg));
   }
 
   .lede {
-    margin-top: 1.5rem;
-    max-width: 38rem;
-    font-size: 1.12rem;
+    margin-top: 1.6rem;
+    max-width: 36rem;
+    font-size: 1.1rem;
+    line-height: 1.65;
     color: var(--muted);
   }
 
@@ -243,36 +325,14 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem 1rem;
-    margin-top: 2rem;
+    gap: 0.75rem 1.1rem;
+    margin-top: 2.1rem;
   }
 
   .github {
     font-family: var(--font-mono);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--muted);
-  }
-
-  .stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem 2.5rem;
-    margin-top: 2.75rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--line);
-  }
-
-  .stats div {
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 0.2rem;
-  }
-
-  .stats dd {
-    font-family: var(--font-mono);
-    font-size: 1.5rem;
-    font-weight: 500;
-    letter-spacing: -0.02em;
   }
 
   .hero-visual {
@@ -281,6 +341,105 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     justify-self: center;
   }
 
+  .hud-caption {
+    margin-bottom: 0.9rem;
+  }
+
+  .hud {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  }
+
+  .hud-card {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 0.45rem;
+    padding: 1.05rem 1.1rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--surface-raised), var(--surface));
+    box-shadow: var(--bevel), var(--shadow-2);
+    overflow: hidden;
+  }
+
+  /* HUD corner ticks and a luminous top rule. */
+  .hud-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 1.1rem auto;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.55;
+  }
+
+  .hud-card::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    pointer-events: none;
+    background:
+      linear-gradient(var(--line-strong), var(--line-strong)) top left / 8px 1px,
+      linear-gradient(var(--line-strong), var(--line-strong)) top left / 1px 8px,
+      linear-gradient(var(--line-strong), var(--line-strong)) bottom right / 8px 1px,
+      linear-gradient(var(--line-strong), var(--line-strong)) bottom right / 1px 8px;
+    background-repeat: no-repeat;
+  }
+
+  .hud-label {
+    font-size: 0.86rem;
+    line-height: 1.4;
+    color: var(--muted);
+  }
+
+  .hud-source {
+    margin-top: 0.2rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--faint);
+    text-decoration: none;
+    width: fit-content;
+  }
+
+  .hud-source::before {
+    content: '↳ ';
+  }
+
+  .hud-source:hover {
+    color: var(--accent);
+  }
+
+  @media (max-width: 40rem) {
+    .hud {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+
+    .hud-card {
+      padding: 0.85rem 0.8rem 0.8rem;
+    }
+
+    .hud-card :global(.md .result) {
+      font-size: 1.12rem;
+    }
+
+    .hud-label {
+      font-size: 0.78rem;
+    }
+
+    .hud-source {
+      font-size: 0.62rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulse::after {
+      animation: none;
+      opacity: 0;
+    }
+  }
   .block {
     margin-top: clamp(4rem, 9vw, 6.5rem);
   }

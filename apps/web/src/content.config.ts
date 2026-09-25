@@ -25,7 +25,16 @@ const projects = defineCollection({
     order: z.number().int().default(100),
     tags: z.array(tag).default([]),
     motion: motion.optional(),
-    metrics: z.array(z.object({ value: z.string(), label: z.string() })).default([]),
+    metrics: z
+      .array(
+        z.object({
+          value: z.string(),
+          label: z.string(),
+          /** Surface this figure in the homepage HUD. */
+          highlight: z.boolean().default(false),
+        }),
+      )
+      .default([]),
   }),
 });
 

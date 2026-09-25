@@ -91,12 +91,6 @@
   margin-top: 0.45em;
 }
 
-.prose blockquote {
-  border-left: 2px solid var(--accent);
-  padding-left: 1.1em;
-  color: var(--muted);
-}
-
 .prose hr {
   border: 0;
   border-top: 1px solid var(--line);
@@ -188,6 +182,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface-raised);
+  box-shadow: var(--bevel), var(--shadow-1);
   overflow: hidden;
 }
 
@@ -278,24 +273,68 @@
   color: var(--shiki-light);
 }
 
-/* Mermaid: source text until the lazy renderer replaces it with SVG. */
+/*
+ * Framed schematics. Mermaid source text shows until the lazy renderer
+ * replaces it with SVG; either way the block sits on a numbered blueprint plate.
+ */
+.prose {
+  counter-reset: schematic;
+}
+
 .prose pre.mermaid,
 pre.mermaid {
+  counter-increment: schematic;
+  position: relative;
+  margin-inline: calc(var(--gutter) * -0.5);
+  padding: 2.6rem 1.5rem 1.5rem;
   font-size: 0.8rem;
   line-height: 1.5;
   color: var(--muted);
-  padding: 1.25rem;
-  border: 1px dashed var(--line-strong);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+    var(--surface);
+  box-shadow: var(--bevel), var(--shadow-1);
   overflow-x: auto;
   white-space: pre;
 }
 
+/* Plate label */
+pre.mermaid::before {
+  content: 'SCHEMATIC ' counter(schematic, decimal-leading-zero);
+  position: absolute;
+  top: 0.8rem;
+  left: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+/* Registration marks in all four corners */
+pre.mermaid::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--accent), var(--accent)) top left / 10px 1px,
+    linear-gradient(var(--accent), var(--accent)) top left / 1px 10px,
+    linear-gradient(var(--accent), var(--accent)) top right / 10px 1px,
+    linear-gradient(var(--accent), var(--accent)) top right / 1px 10px,
+    linear-gradient(var(--accent), var(--accent)) bottom left / 10px 1px,
+    linear-gradient(var(--accent), var(--accent)) bottom left / 1px 10px,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 10px 1px,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 1px 10px;
+  background-repeat: no-repeat;
+  opacity: 0.55;
+}
+
 pre.mermaid[data-processed='true'] {
   white-space: normal;
-  border-style: solid;
-  border-color: var(--line);
   text-align: center;
   color: var(--text);
 }
@@ -307,8 +346,28 @@ pre.mermaid svg {
 }
 
 @media (max-width: 40rem) {
+  .prose pre.mermaid {
+    margin-inline: calc(var(--gutter) * -1);
+    border-radius: 0;
+    border-inline: 0;
+  }
+
   pre.mermaid[data-processed='true'] svg {
     max-width: none;
     min-width: 34rem;
   }
+}
+
+/* Callout: blockquotes read as annotated notes. */
+.prose blockquote {
+  position: relative;
+  padding: 1rem 1.2rem 1rem 1.4rem;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
+    var(--surface);
+  color: var(--text);
+  box-shadow: var(--bevel);
 }

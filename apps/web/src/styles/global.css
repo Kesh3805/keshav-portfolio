@@ -37,10 +37,22 @@
   }
 
   body {
+    position: relative;
     background: var(--bg);
     min-height: 100dvh;
     line-height: 1.6;
     font-feature-settings: 'ss02';
+  }
+
+  /* Atmospheric depth: two faint light sources at the top of the page. Scrolls with the page, so no fixed-background repaints. */
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 70rem;
+    background: var(--atmosphere);
+    pointer-events: none;
+    z-index: -1;
   }
 
   ::selection {
@@ -140,9 +152,10 @@
     line-height: 1;
     padding: 0.35rem 0.5rem;
     border: 1px solid var(--line);
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     color: var(--muted);
-    background: var(--surface);
+    background: var(--surface-raised);
+    box-shadow: var(--bevel);
     white-space: nowrap;
     transition:
       border-color 160ms var(--ease),
@@ -186,34 +199,70 @@
     padding: 0.65rem 1rem;
     border-radius: var(--radius);
     border: 1px solid var(--line-strong);
+    background: var(--surface-raised);
+    box-shadow: var(--bevel), var(--shadow-1);
     text-decoration: none;
     transition:
       border-color 160ms var(--ease),
       background-color 160ms var(--ease),
+      box-shadow 200ms var(--ease),
       transform 160ms var(--ease);
   }
 
   .btn:hover {
-    border-color: var(--text);
+    border-color: var(--muted);
+  }
+
+  .btn:active {
+    transform: translateY(1px);
   }
 
   .btn-primary {
-    background: var(--accent);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 88%, white),
+      var(--accent)
+    );
     border-color: var(--accent);
     color: var(--accent-ink);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      var(--glow-accent);
   }
 
   .btn-primary:hover {
     border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 88%, var(--text));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.3),
+      0 0 0 1px var(--accent),
+      0 10px 32px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+
+  /* Raised panel: surface + bevel highlight + shadow step. */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--bevel), var(--shadow-1);
   }
 
   .grid-backdrop {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .grid-backdrop::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background-image:
       linear-gradient(var(--grid) 1px, transparent 1px),
       linear-gradient(90deg, var(--grid) 1px, transparent 1px);
     background-size: 32px 32px;
     background-position: -1px -1px;
+    mask-image: radial-gradient(120% 90% at 30% 20%, black 40%, transparent 85%);
   }
 
   .sr-only-focusable:not(:focus) {
