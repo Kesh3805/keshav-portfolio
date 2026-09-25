@@ -13,13 +13,13 @@ interface Props {
 }
 
 const { project, index, headingLevel: Heading = 'h3', preview = false } = Astro.props;
-const { title, slug, category, description, technologies, motion } = project.data;
+const { title, slug, category, description, technologies, motion, tags } = project.data;
 const visible = technologies.slice(0, 5);
 const hidden = technologies.length - visible.length;
 const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) : [];
 ---
 
-<article class="card" data-spotlight data-slug={slug}>
+<article class="card" data-spotlight data-slug={slug} data-tags={tags.join('|')}>
   {
     posters.length > 0 && (
       <div class="poster-frame">
