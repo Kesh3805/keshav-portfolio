@@ -1,0 +1,54 @@
+---
+// durable-sse-notifications: an ephemeral channel loses the event sent while
+// the browser is away; a stored stream replays it after Last-Event-ID.
+import Box from './Box.astro';
+import Explainer from './Explainer.astro';
+import Packet from './Packet.astro';
+---
+
+<Explainer
+  label="Explainer"
+  before="Ephemeral channel"
+  after="Durable stream"
+  caption="An ephemeral channel can only deliver to whoever is connected at that moment. The durable stream stores every event, so a reconnecting EventSource sends its Last-Event-ID and receives what it missed."
+>
+  <svg slot="before" viewBox="0 0 340 222" role="img" aria-labelledby="sse-before">
+    <title id="sse-before">
+      The browser disconnects; the workflow's event reaches the ephemeral channel and is lost. On
+      reconnect there is nothing to replay.
+    </title>
+    <path class="edge" d="M92 110 H120"></path>
+    <path class="edge a-break" d="M220 110 H248" style="--at: 0.2s; --len: 2.2s"></path>
+    <Box x={8} y={90} w={84} label="Workflow" />
+    <Box x={120} y={86} w={100} h={48} label="SSE channel" sub="ephemeral" />
+    <Box x={248} y={90} w={84} label="Browser" />
+    <text class="bad a-blip" x="232" y="80" style="--at: 0.3s; --len: 2s">disconnected</text>
+    <Packet d="M92 110 H120" at={0.8} dur={0.4} />
+    <Packet d="M220 110 H236" at={1.25} dur={0.3} tone="bad" />
+    <text class="bad a-in" x="150" y="160" style="--at: 1.5s">event lost</text>
+    <text class="tag" x="8" y="200">delivered only if connected right now</text>
+    <text class="tag a-in" x="8" y="216" style="--at: 2.4s">reconnect → nothing to replay</text>
+  </svg>
+
+  <svg slot="after" viewBox="0 0 340 222" role="img" aria-labelledby="sse-after">
+    <title id="sse-after">
+      The event is stored as row 42. The browser reconnects with Last-Event-ID 41, and the stream
+      replays event 42.
+    </title>
+    <path class="edge" d="M50 80 V164 H114"></path>
+    <path class="edge" d="M166 140 V84"></path>
+    <path class="edge a-break" d="M218 60 H248" style="--at: 2.7s; --len: 1.7s"></path>
+    <Box x={8} y={40} w={84} label="Workflow" />
+    <Box x={114} y={36} w={104} h={48} label="SSE stream" sub="heartbeat 25s" />
+    <Box x={248} y={40} w={84} label="Browser" />
+    <Box x={114} y={140} w={104} h={48} label="Store" sub="stored events" tone="data" />
+    <Packet d="M50 80 V164 H114" at={2.8} dur={0.55} />
+    <text class="data a-in" x="226" y="168" style="--at: 3.35s">+ id 42</text>
+    <text class="sub a-in" x="228" y="100" style="--at: 4s">Last-Event-ID: 41</text>
+    <Packet d="M248 66 H218" at={4.0} dur={0.28} />
+    <Packet d="M166 140 V84" at={4.35} dur={0.3} />
+    <Packet d="M218 54 H248" at={4.7} dur={0.3} tone="ok" />
+    <text class="tag" x="8" y="216">replays everything after Last-Event-ID</text>
+    <text class="ok a-in" x="252" y="30" style="--at: 5s">42 delivered</text>
+  </svg>
+</Explainer>

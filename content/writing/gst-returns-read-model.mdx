@@ -13,6 +13,9 @@ relatedProjects:
 featured: true
 ---
 
+import ReadModelExplainer from '../../apps/web/src/components/explainers/ReadModelExplainer.astro';
+
+
 The platform is a GST compliance product for Indian accounting firms and businesses. One of its busiest screens is the returns dashboard: for a client's GSTIN and a tax period, where does each return stand? That screen is served by a returns read API, and at peak load it took more than 3,000ms to answer.
 
 After the change described here, the same endpoint answers in under 15ms at peak load. Those two figures are the only measurements in this article. The rest is about why the fix had the shape it did.
@@ -35,6 +38,8 @@ A cache is also keyed by *requests*. The thing that changes is *filings*. Invali
 ## The architecture
 
 The fix inverts the direction: instead of the reader asking every source for its state, **the sources tell a projection when they change**.
+
+<ReadModelExplainer />
 
 ```mermaid
 flowchart LR

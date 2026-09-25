@@ -1,0 +1,332 @@
+---
+// Frame for small in-article explainers: two panels, the state before an
+// engineering decision and the state after it.
+//
+// Motion contract (shared by every explainer):
+//   - The markup is the final state. Without JS, or with reduced motion, that
+//     is what renders, and it already tells the story.
+//   - `.a-in` / `.a-out` / `.a-break` elements animate from an initial state to
+//     that final state, starting `--at` after the figure is first revealed.
+//   - SMIL <animate*> elements with `data-at` (moving data) start at the same
+//     moment, via beginElementAt(). Data moves linearly.
+//   - It plays once. "Replay" restarts it.
+interface Props {
+  label: string;
+  caption: string;
+  before: string;
+  after: string;
+}
+
+const { label, caption, before, after } = Astro.props;
+---
+
+<figure class="explainer" data-explainer>
+  <div class="panels">
+    <div class="panel-cell">
+      <p class="state meta"><span class="dot bad" aria-hidden="true"></span>{before}</p>
+      <slot name="before" />
+    </div>
+    <div class="panel-cell">
+      <p class="state meta"><span class="dot good" aria-hidden="true"></span>{after}</p>
+      <slot name="after" />
+    </div>
+  </div>
+  <figcaption>
+    <span class="meta label">{label}</span>
+    <span class="caption">{caption}</span>
+    <button type="button" class="replay meta" hidden>↻ Replay</button>
+  </figcaption>
+</figure>
+
+<script>
+  const figures = document.querySelectorAll<HTMLElement>('[data-explainer]');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function play(figure: HTMLElement) {
+    figure.classList.remove('is-playing');
+    void figure.offsetWidth; // restart CSS animations
+    figure.classList.add('is-playing');
+    for (const anim of figure.querySelectorAll<SVGAnimationElement>('[data-at]')) {
+      anim.endElement();
+      anim.beginElementAt(Number(anim.dataset.at));
+    }
+  }
+
+  if (!reduced && figures.length) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          play(entry.target as HTMLElement);
+          io.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.5 },
+    );
+    for (const figure of figures) {
+      figure.classList.add('is-armed');
+      io.observe(figure);
+      const replay = figure.querySelector<HTMLButtonElement>('.replay');
+      if (replay) {
+        replay.hidden = false;
+        replay.addEventListener('click', () => play(figure));
+      }
+    }
+  }
+</script>
+
+<style>
+  .explainer {
+    margin: 2rem 0;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 16px 16px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 16px 16px,
+      var(--surface);
+    box-shadow: var(--bevel), var(--shadow-2);
+  }
+
+  .panels {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @media (min-width: 40rem) {
+    .panels {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .panel-cell {
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+  }
+
+  .state {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.4rem;
+  }
+
+  .dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+  }
+
+  .dot.bad {
+    background: var(--error);
+  }
+
+  .dot.good {
+    background: var(--ok);
+  }
+
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin-top: 0.85rem;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  .caption {
+    flex: 1 1 18rem;
+  }
+
+  .replay {
+    cursor: pointer;
+  }
+
+  .replay:hover {
+    color: var(--accent);
+  }
+
+  /* --- Shared SVG vocabulary for the panels */
+  .explainer :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .explainer :global(.box rect) {
+    fill: var(--surface-raised);
+    stroke: var(--line-strong);
+    stroke-width: 1;
+  }
+
+  .explainer :global(.box.ok rect) {
+    stroke: var(--ok);
+  }
+
+  .explainer :global(.box.bad rect) {
+    stroke: var(--error);
+  }
+
+  .explainer :global(.box.data rect) {
+    stroke: var(--data);
+  }
+
+  .explainer :global(text) {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    fill: var(--text);
+  }
+
+  .explainer :global(text.sub) {
+    font-size: 10.5px;
+    fill: var(--faint);
+  }
+
+  .explainer :global(text.tag) {
+    font-size: 11px;
+    fill: var(--muted);
+  }
+
+  .explainer :global(text.bad) {
+    fill: var(--error);
+  }
+
+  .explainer :global(text.ok) {
+    fill: var(--ok);
+  }
+
+  .explainer :global(text.data) {
+    fill: var(--data);
+  }
+
+  .explainer :global(.edge) {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1.25;
+  }
+
+  .explainer :global(.edge.dashed) {
+    stroke-dasharray: 4 4;
+  }
+
+  .explainer :global(.edge.data) {
+    stroke: var(--data);
+  }
+
+  .explainer :global(.edge.ok) {
+    stroke: var(--ok);
+  }
+
+  .explainer :global(.arrowhead) {
+    fill: var(--line-strong);
+  }
+
+  .explainer :global(.pkt) {
+    fill: var(--data);
+  }
+
+  .explainer :global(.pkt.bad) {
+    fill: var(--error);
+  }
+
+  .explainer :global(.pkt.ok) {
+    fill: var(--ok);
+  }
+
+  .explainer :global(.job) {
+    fill: var(--accent);
+  }
+
+  /* Animations run only when JS armed the figure and motion is allowed; the base styles are the final state. */
+  @media (prefers-reduced-motion: no-preference) {
+    .is-armed :global(.a-in),
+    .is-armed :global(.a-out),
+    .is-armed :global(.a-blip),
+    .is-armed :global(.a-break) {
+      animation-duration: var(--len, 280ms);
+      animation-delay: var(--at, 0s);
+      animation-fill-mode: both;
+      animation-play-state: paused;
+    }
+
+    .is-armed :global(.a-in) {
+      animation-name: explainer-in;
+      animation-timing-function: var(--ease);
+    }
+
+    .is-armed :global(.a-out) {
+      animation-name: explainer-out;
+      animation-timing-function: var(--ease);
+    }
+
+    .is-armed :global(.a-blip) {
+      animation-name: explainer-blip;
+      animation-timing-function: linear;
+    }
+
+    .is-armed :global(.a-break) {
+      animation-name: explainer-break;
+      animation-timing-function: linear;
+    }
+
+    .is-playing :global(.a-in),
+    .is-playing :global(.a-out),
+    .is-playing :global(.a-blip),
+    .is-playing :global(.a-break) {
+      animation-play-state: running;
+    }
+  }
+
+  @keyframes explainer-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes explainer-out {
+    from {
+      opacity: 1;
+    }
+  }
+
+  /* Visible only during its window (a transient state such as a disconnect); hidden in the final state. */
+  .explainer :global(.a-out),
+  .explainer :global(.a-blip) {
+    opacity: 0;
+  }
+
+  @keyframes explainer-blip {
+    0% {
+      opacity: 0;
+    }
+    6%,
+    94% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* A link drops (dashed, faint) for most of its window, then recovers. */
+  @keyframes explainer-break {
+    0% {
+      stroke-dasharray: none;
+      opacity: 1;
+    }
+    6%,
+    94% {
+      stroke-dasharray: 3 5;
+      opacity: 0.35;
+    }
+    100% {
+      stroke-dasharray: none;
+      opacity: 1;
+    }
+  }
+</style>

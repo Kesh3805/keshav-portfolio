@@ -1,0 +1,54 @@
+---
+// redis-bullmq-namespace-bug: same queue name under two key prefixes, so jobs
+// pile up where no worker listens; one shared queueLocation(env) fixes it.
+import Box from './Box.astro';
+import Explainer from './Explainer.astro';
+import Packet from './Packet.astro';
+---
+
+<Explainer
+  label="Explainer"
+  before="Same name, two keyspaces"
+  after="One shared identity"
+  caption="The producer wrote under the default bull: prefix while the worker listened under bull:<env>:. Every add() resolved and the worker sat idle. Deriving the prefix from one shared definition put both on the same keys."
+>
+  <svg slot="before" viewBox="0 0 340 222" role="img" aria-labelledby="q-before">
+    <title id="q-before">
+      The producer adds jobs to bull:queue while the worker listens on bull:env:queue. Jobs pile up
+      where nobody reads.
+    </title>
+    <path class="edge" d="M112 50 H150"></path>
+    <path class="edge" d="M150 170 H112"></path>
+    <path class="edge dashed" d="M240 70 V120 L112 160"></path>
+    <Box x={8} y={30} w={104} label="Producer" sub="extraction" />
+    <Box x={8} y={150} w={104} label="Worker" sub="connected, idle" />
+    <Box x={150} y={30} w={182} label="bull:queue:*" tone="bad" />
+    <Box x={150} y={150} w={182} label="bull:env:queue:*" sub="0 jobs" />
+    <rect class="job a-in" x="286" y="44" width="10" height="12" rx="2" style="--at: 0.6s"></rect>
+    <rect class="job a-in" x="300" y="44" width="10" height="12" rx="2" style="--at: 1.1s"></rect>
+    <rect class="job a-in" x="314" y="44" width="10" height="12" rx="2" style="--at: 1.6s"></rect>
+    <Packet d="M112 50 H200" at={0.2} dur={0.4} />
+    <Packet d="M112 50 H200" at={0.7} dur={0.4} />
+    <Packet d="M112 50 H200" at={1.2} dur={0.4} />
+    <text class="bad a-in" x="248" y="100" style="--at: 1.9s">× nobody reads</text>
+    <text class="tag" x="8" y="216">add() resolves; nothing is delivered</text>
+  </svg>
+
+  <svg slot="after" viewBox="0 0 340 222" role="img" aria-labelledby="q-after">
+    <title id="q-after">
+      Producer and worker both derive the prefix from queueLocation(env) and share bull:env:queue;
+      jobs reach the worker.
+    </title>
+    <path class="edge" d="M112 50 H131 V104 H150"></path>
+    <path class="edge" d="M150 116 H131 V170 H112"></path>
+    <Box x={8} y={30} w={104} label="Producer" sub="extraction" />
+    <Box x={8} y={150} w={104} label="Worker" sub="core service" tone="ok" />
+    <Box x={150} y={86} w={182} h={48} label="bull:env:queue:*" sub="queueLocation(env)" tone="data" />
+    <Packet d="M112 50 H131 V104 H150" at={2.7} dur={0.5} />
+    <Packet d="M150 116 H131 V170 H112" at={3.25} dur={0.5} tone="ok" />
+    <Packet d="M112 50 H131 V104 H150" at={3.4} dur={0.5} />
+    <Packet d="M150 116 H131 V170 H112" at={3.95} dur={0.5} tone="ok" />
+    <text class="ok a-in" x="8" y="206" style="--at: 3.8s">results reach the worker</text>
+    <text class="tag" x="8" y="222">the prefix is part of the queue's identity</text>
+  </svg>
+</Explainer>

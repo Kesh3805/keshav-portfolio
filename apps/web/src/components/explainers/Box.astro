@@ -1,0 +1,22 @@
+---
+// Labelled box inside an explainer panel.
+interface Props {
+  x: number;
+  y: number;
+  w: number;
+  h?: number;
+  label: string;
+  sub?: string;
+  tone?: 'ok' | 'bad' | 'data';
+  class?: string;
+  style?: string;
+}
+
+const { x, y, w, h = 40, label, sub, tone, class: className, style } = Astro.props;
+---
+
+<g class:list={['box', tone, className]} style={style}>
+  <rect x={x} y={y} width={w} height={h} rx="5"></rect>
+  <text x={x + 10} y={sub ? y + 17 : y + h / 2 + 4}>{label}</text>
+  {sub && <text class="sub" x={x + 10} y={y + 31}>{sub}</text>}
+</g>

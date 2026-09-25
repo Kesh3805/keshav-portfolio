@@ -12,6 +12,9 @@ relatedProjects:
 featured: true
 ---
 
+import QueueIdentityExplainer from '../../apps/web/src/components/explainers/QueueIdentityExplainer.astro';
+
+
 The GST compliance platform has two services involved in reading invoices. The **Document Extraction & Ingestion Worker** takes an uploaded PDF, sends it to LlamaIndex Cloud for extraction, and receives the result through a signed webhook. It then hands the result to the **Core Domain & Ledger Service**, which maps it into the ledger. The hand-off is a BullMQ queue on Redis.
 
 For a while, that hand-off delivered nothing. It was a cross-repo P0.
@@ -51,6 +54,8 @@ redis-cli --scan --pattern 'bull:*' | cut -d: -f1-3 | sort | uniq -c
 ## The fix, and the pattern behind it
 
 The fix aligned producer and consumer on one keyspace. The way to keep it from coming back is to stop letting each service spell the queue's location on its own.
+
+<QueueIdentityExplainer />
 
 ```ts title="queues.sketch.ts"
 import { Queue, Worker, type ConnectionOptions, type Processor } from 'bullmq';

@@ -1,0 +1,67 @@
+---
+// gst-returns-read-model: status assembled on every read → read from a projection
+// that the filing writers keep fresh. The only figures are the article's own.
+import Box from './Box.astro';
+import Explainer from './Explainer.astro';
+import Packet from './Packet.astro';
+---
+
+<Explainer
+  label="Explainer"
+  before="Derived on every read"
+  after="Read from a projection"
+  caption="Before, every dashboard read asked each return's source for its state. After, GSTR-1 and GSTR-3B writers emit a source-changed event and the read API selects one precomputed row."
+>
+  <svg slot="before" viewBox="0 0 340 222" role="img" aria-labelledby="rm-before">
+    <title id="rm-before">
+      Dashboard calls the read API, which queries GSTR-1 and GSTR-3B on every request: 3,000ms+ at
+      peak.
+    </title>
+    <defs>
+      <marker id="rm-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+        <path class="arrowhead" d="M0 0 L8 4 L0 8 z"></path>
+      </marker>
+    </defs>
+    <path class="edge" d="M92 110 H114" marker-end="url(#rm-arrow)"></path>
+    <path class="edge" d="M218 102 L242 62" marker-end="url(#rm-arrow)"></path>
+    <path class="edge" d="M218 118 L242 158" marker-end="url(#rm-arrow)"></path>
+    <Box x={8} y={90} w={84} label="Dashboard" />
+    <Box x={116} y={86} w={102} h={48} label="Read API" sub="derives status" tone="bad" />
+    <Box x={244} y={40} w={88} label="GSTR-1" />
+    <Box x={244} y={140} w={88} label="GSTR-3B" />
+    <Packet d="M92 110 H116" at={0.2} dur={0.35} />
+    <Packet d="M218 102 L244 60" at={0.6} dur={0.35} />
+    <Packet d="M218 118 L244 160" at={0.6} dur={0.35} />
+    <Packet d="M244 60 L218 102" at={1.05} dur={0.35} />
+    <Packet d="M244 160 L218 118" at={1.05} dur={0.35} />
+    <Packet d="M116 110 H92" at={1.5} dur={0.4} tone="bad" />
+    <text class="tag" x="8" y="200">assembled on request, at request time</text>
+    <text class="bad a-in" x="8" y="216" style="--at: 1.95s">3,000ms+ at peak</text>
+  </svg>
+
+  <svg slot="after" viewBox="0 0 340 222" role="img" aria-labelledby="rm-after">
+    <title id="rm-after">
+      GSTR-1 and GSTR-3B writers emit source-changed events into a projection; the read API reads
+      one row: under 15ms at peak.
+    </title>
+    <defs>
+      <marker id="rm-arrow-2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+        <path class="arrowhead" d="M0 0 L8 4 L0 8 z"></path>
+      </marker>
+    </defs>
+    <path class="edge" d="M104 62 L134 102" marker-end="url(#rm-arrow-2)"></path>
+    <path class="edge" d="M104 158 L134 118" marker-end="url(#rm-arrow-2)"></path>
+    <path class="edge" d="M258 110 H234" marker-end="url(#rm-arrow-2)"></path>
+    <Box x={8} y={40} w={96} label="GSTR-1" sub="writer" />
+    <Box x={8} y={140} w={96} label="GSTR-3B" sub="writer" />
+    <Box x={136} y={86} w={96} h={48} label="Projection" sub="status rows" tone="data" />
+    <Box x={260} y={90} w={72} label="Read API" />
+    <text class="sub a-in" x="112" y="76" style="--at: 2.6s">source-changed</text>
+    <Packet d="M104 62 L136 104" at={2.6} dur={0.45} />
+    <Packet d="M104 158 L136 116" at={3.0} dur={0.45} />
+    <Packet d="M260 110 H232" at={3.8} dur={0.18} />
+    <Packet d="M232 110 H260" at={4.0} dur={0.18} tone="ok" />
+    <text class="tag" x="8" y="200">computed when a filing changes</text>
+    <text class="ok a-in" x="8" y="216" style="--at: 4.25s">&lt;15ms at peak</text>
+  </svg>
+</Explainer>

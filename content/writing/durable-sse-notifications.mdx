@@ -12,6 +12,9 @@ relatedProjects:
   - fintax
 ---
 
+import SseDurabilityExplainer from '../../apps/web/src/components/explainers/SseDurabilityExplainer.astro';
+
+
 Much of what a GST compliance platform does for a user takes longer than a request. Invoice extraction goes out to LlamaIndex Cloud and comes back through a webhook. IMS syncs talk to the GST portal. GSTR-1 generation and credit-ledger workflows run in the background. M9 reconciliation — a three-way match of the purchase register against IMS and GSTR-2B — is queued and runs asynchronously.
 
 All of those need to tell the browser when they finish. This is about how that channel changed.
@@ -31,6 +34,8 @@ That last property only helps if the server can answer the question it implies: 
 ## The architecture
 
 The channels were replaced with one **durable notification centre**: a database-backed store covering invoice extraction, IMS, GSTR-1 and credit-ledger workflows, served through a single endpoint.
+
+<SseDurabilityExplainer />
 
 ```mermaid
 sequenceDiagram

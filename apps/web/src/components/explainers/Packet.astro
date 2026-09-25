@@ -1,0 +1,26 @@
+---
+// A unit of data moving along a straight-line path, once, at constant speed.
+// Starts when the parent explainer plays (see Explainer.astro).
+interface Props {
+  d: string;
+  at: number;
+  dur: number;
+  tone?: 'data' | 'ok' | 'bad';
+  r?: number;
+}
+
+const { d, at, dur, tone = 'data', r = 4 } = Astro.props;
+---
+
+<circle class:list={['pkt', tone !== 'data' && tone]} r={r} opacity="0">
+  <animateMotion path={d} dur={`${dur}s`} begin="indefinite" fill="freeze" calcMode="linear" data-at={at} />
+  <animate
+    attributeName="opacity"
+    values="0;1;1;0"
+    keyTimes="0;0.08;0.9;1"
+    dur={`${dur}s`}
+    begin="indefinite"
+    fill="freeze"
+    data-at={at}
+  />
+</circle>
