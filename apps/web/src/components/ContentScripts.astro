@@ -57,24 +57,67 @@
     diagrams.forEach((el) => observer.observe(el));
   }
 
+  // Brief confirmation shared by the copy interactions below.
+  const flash = (el: HTMLElement, state: 'copied' | 'failed', label?: [HTMLElement, string]) => {
+    el.dataset.state = state;
+    if (label) label[0].textContent = state === 'copied' ? 'Copied' : 'Failed';
+    clearTimeout(Number(el.dataset.timer));
+    el.dataset.timer = String(
+      setTimeout(() => {
+        delete el.dataset.state;
+        if (label) label[0].textContent = label[1];
+      }, 1600),
+    );
+  };
+
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
     if (!navigator.clipboard) continue;
     button.hidden = false;
+    const label = button.querySelector<HTMLElement>('.code-copy-label') ?? button;
     button.addEventListener('click', async () => {
       const code = button.closest('.code-block')?.querySelector('pre code');
       if (!code) return;
       const text = [...code.querySelectorAll('.line')].map((l) => l.textContent).join('\n');
       try {
         await navigator.clipboard.writeText(text || code.textContent || '');
-        button.textContent = 'Copied';
-        button.dataset.state = 'copied';
+        flash(button, 'copied', [label, 'Copy']);
       } catch {
-        button.textContent = 'Failed';
+        flash(button, 'failed', [label, 'Copy']);
       }
-      setTimeout(() => {
-        button.textContent = 'Copy';
-        delete button.dataset.state;
-      }, 1600);
+    });
+  }
+
+  // Heading permalinks: a "#" link on every section heading; clicking it also copies the URL.
+  const toast = (message: string) => {
+    document.querySelector('.copy-toast')?.remove();
+    const el = document.createElement('div');
+    el.className = 'copy-toast';
+    el.setAttribute('role', 'status');
+    el.textContent = message;
+    document.body.append(el);
+    setTimeout(() => el.remove(), 1800);
+  };
+
+  for (const heading of document.querySelectorAll<HTMLElement>('.prose :is(h2, h3)[id]')) {
+    const anchor = document.createElement('a');
+    anchor.className = 'heading-anchor';
+    anchor.href = `#${heading.id}`;
+    anchor.textContent = '#';
+    anchor.setAttribute('aria-label', `Link to section: ${heading.textContent?.trim()}`);
+    heading.append(anchor);
+    anchor.addEventListener('click', async (event) => {
+      if (!navigator.clipboard) return; // plain in-page link
+      event.preventDefault();
+      const url = new URL(anchor.href);
+      history.replaceState(null, '', url.hash);
+      heading.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      try {
+        await navigator.clipboard.writeText(url.href);
+        flash(anchor, 'copied');
+        toast('Link copied');
+      } catch {
+        toast('Could not copy the link');
+      }
     });
   }
 </script>

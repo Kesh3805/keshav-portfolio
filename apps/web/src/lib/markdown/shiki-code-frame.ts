@@ -20,6 +20,35 @@ const LANGUAGE_LABELS: Record<string, string> = {
   plaintext: 'Text',
 };
 
+/** A Lucide-style 24×24 stroke icon as hast, so the copy button needs no client-side icon code. */
+function icon(
+  className: string,
+  shapes: [string, Record<string, string>][],
+): import('hast').Element {
+  return {
+    type: 'element',
+    tagName: 'svg',
+    properties: {
+      className: [className],
+      viewBox: '0 0 24 24',
+      width: '14',
+      height: '14',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: '2',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      ariaHidden: 'true',
+    },
+    children: shapes.map(([tagName, properties]) => ({
+      type: 'element',
+      tagName,
+      properties,
+      children: [],
+    })),
+  };
+}
+
 /**
  * Wraps each highlighted block in a <figure> with a header carrying the
  * language, an optional `title="file.ts"` from the fence meta, and a copy
@@ -63,7 +92,19 @@ export function transformerCodeFrame(): ShikiTransformer {
           'data-copy': '',
           'aria-label': 'Copy code to clipboard',
         },
-        children: [{ type: 'text', value: 'Copy' }],
+        children: [
+          icon('code-copy-icon', [
+            ['rect', { width: '14', height: '14', x: '8', y: '8', rx: '2', ry: '2' }],
+            ['path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' }],
+          ]),
+          icon('code-check-icon', [['path', { d: 'M20 6 9 17l-5-5' }]]),
+          {
+            type: 'element',
+            tagName: 'span',
+            properties: { className: ['code-copy-label'] },
+            children: [{ type: 'text', value: 'Copy' }],
+          },
+        ],
       });
 
       root.children = [
