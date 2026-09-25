@@ -1,154 +1,733 @@
 ---
-// Small hero visual: one system fanning out into the layers the work spans.
-// Pure SVG + CSS; the dashes stop under prefers-reduced-motion.
-const branches = [
-  { label: 'API', note: 'NestJS · REST · SSE' },
-  { label: 'Data', note: 'PostgreSQL · MySQL · pgvector' },
-  { label: 'Queue', note: 'BullMQ · Redis' },
-  { label: 'AI', note: 'LlamaIndex · RAG · LLM clients' },
-  { label: 'Infrastructure', note: 'GCP · Docker · GitHub Actions' },
-];
-const rowY = (i: number) => 38 + i * 68;
-const originY = rowY(2);
+// Homepage topology: the shared building blocks behind the projects.
+//
+// Layers, bottom to top:
+//   1. SVG: the complete diagram, and the whole experience without JS or WebGL.
+//   2. Canvas: an optional WebGL rendering of the same frame (scripts/topology-scene.ts),
+//      loaded on demand and cross-faded in once the SVG has finished constructing.
+//   3. HTML: node labels as buttons (the keyboard / touch interface), tooltip.
+// Selecting a node lists the projects it appears in and highlights their cards.
+import { getProjects } from '../lib/content';
+import { href } from '../lib/paths';
+import {
+  PLINTH,
+  edges,
+  frame,
+  labelAnchor,
+  neighbours,
+  nodeById,
+  nodes,
+  plinthScreen as ps,
+  project,
+  signalPath,
+  toPercent,
+} from '../lib/topology';
+
+const projects = await getProjects();
+const bySlug = new Map(projects.map((p) => [p.data.slug, p]));
+for (const n of nodes) {
+  for (const { slug } of n.projects) {
+    if (!bySlug.has(slug)) throw new Error(`Topology node "${n.id}" references unknown project "${slug}"`);
+  }
+}
+
+const S = 40; // SVG user units per screen unit
+const pt = (x: number, y: number) => `${(x * S).toFixed(1)},${(y * S).toFixed(1)}`;
+const faces = (u: number, v: number) => {
+  const p = project(u, v);
+  const { halfWidth: w, halfHeight: h, lift: l } = ps;
+  return {
+    top: [pt(p.x, p.y - h - l), pt(p.x + w, p.y - l), pt(p.x, p.y + h - l), pt(p.x - w, p.y - l)].join(' '),
+    left: [pt(p.x - w, p.y - l), pt(p.x, p.y + h - l), pt(p.x, p.y + h), pt(p.x - w, p.y)].join(' '),
+    right: [pt(p.x, p.y + h - l), pt(p.x + w, p.y - l), pt(p.x + w, p.y), pt(p.x, p.y + h)].join(' '),
+  };
+};
+
+const edgeShapes = edges.map((e, i) => {
+  const a = nodeById.get(e.from)!;
+  const b = nodeById.get(e.to)!;
+  const pa = project(a.u, a.v);
+  const pb = project(b.u, b.v);
+  const len = Math.hypot(pb.x - pa.x, pb.y - pa.y);
+  const d = { x: (pb.x - pa.x) / len, y: (pb.y - pa.y) / len };
+  const mid = { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 };
+  const s = 0.13;
+  const arrow = e.directed
+    ? [
+        pt(mid.x + d.x * s, mid.y + d.y * s),
+        pt(mid.x - d.x * s - d.y * s * 0.8, mid.y - d.y * s + d.x * s * 0.8),
+        pt(mid.x - d.x * s + d.y * s * 0.8, mid.y - d.y * s - d.x * s * 0.8),
+      ].join(' ')
+    : null;
+  return { ...e, i, d: `M ${pt(pa.x, pa.y)} L ${pt(pb.x, pb.y)}`, arrow };
+});
+
+const signal = `M ${signalPath
+  .map((id) => {
+    const n = nodeById.get(id)!;
+    const p = project(n.u, n.v, 0.05);
+    return pt(p.x, p.y);
+  })
+  .join(' L ')}`;
+
+const viewBox = [frame.minX * S, frame.minY * S, frame.width * S, frame.height * S]
+  .map((n) => n.toFixed(1))
+  .join(' ');
+
+const view = nodes.map((n, i) => {
+  const pos = toPercent(labelAnchor(n));
+  const top = toPercent(project(n.u, n.v, PLINTH.height));
+  const related = n.projects.map(({ slug }) => bySlug.get(slug)!);
+  return {
+    ...n,
+    i,
+    faces: faces(n.u, n.v),
+    pos,
+    anchor: top,
+    related,
+    near: neighbours(n.id),
+  };
+});
 ---
 
-<figure class="system" aria-labelledby="system-caption">
-  <svg viewBox="0 0 460 380" role="img" aria-labelledby="system-title">
-    <title id="system-title">
-      A system node connected to API, Data, Queue, AI and Infrastructure layers.
-    </title>
-    <g class="edges">
+<figure class="topology" data-topology aria-labelledby="topology-caption">
+  <div
+    class="stage"
+    style={`aspect-ratio: ${frame.width.toFixed(3)} / ${frame.height.toFixed(3)}`}
+  >
+    <svg class="plan" viewBox={viewBox} aria-hidden="true" focusable="false">
+      <g class="edges">
+        {
+          edgeShapes.map((e) => (
+            <g class="edge" data-from={e.from} data-to={e.to} style={`--i:${e.i}`}>
+              <path d={e.d} pathLength="1" />
+              {e.arrow && <polygon points={e.arrow} />}
+            </g>
+          ))
+        }
+      </g>
+      <g class="nodes">
+        {
+          view.map((n) => (
+            <g class="node" data-node={n.id} style={`--i:${n.i}`}>
+              <polygon class="left" points={n.faces.left} />
+              <polygon class="right" points={n.faces.right} />
+              <polygon class="top" points={n.faces.top} />
+            </g>
+          ))
+        }
+      </g>
+      <circle class="signal" r="4.5" opacity="0">
+        <animateMotion id="topology-signal" path={signal} begin="1.9s" dur="1.6s" fill="freeze" />
+        <animate
+          attributeName="opacity"
+          values="0;1;1;0"
+          keyTimes="0;0.06;0.88;1"
+          begin="topology-signal.begin"
+          dur="1.6s"
+          fill="freeze"
+        />
+      </circle>
+    </svg>
+
+    <canvas class="gl" aria-hidden="true"></canvas>
+
+    <ul class="labels" role="list" aria-label="System components">
       {
-        branches.map((_, i) => {
-          const y = rowY(i);
-          const d = `M 118 ${originY} H 150 Q 162 ${originY} 162 ${originY + Math.sign(y - originY) * 12} V ${y - Math.sign(y - originY) * 12} Q 162 ${y} 174 ${y} H 214`;
-          const path = y === originY ? `M 118 ${originY} H 214` : d;
-          return (
-            <>
-              <path class="edge" d={path} />
-              <path class="flow" d={path} style={`animation-delay: ${i * -0.7}s`} />
-            </>
-          );
-        })
+        view.map((n) => (
+          <li style={`left:${n.pos.left.toFixed(2)}%;top:${n.pos.top.toFixed(2)}%;--i:${n.i}`}>
+            <button
+              type="button"
+              class="label"
+              data-label={n.id}
+              data-near={n.near.join(' ')}
+              data-anchor={`${n.anchor.left.toFixed(2)} ${n.anchor.top.toFixed(2)}`}
+              aria-pressed="false"
+              aria-describedby={`topology-desc-${n.id}`}
+            >
+              <span class="name">{n.label}</span>
+              <span class="note">{n.note}</span>
+            </button>
+          </li>
+        ))
       }
-    </g>
+    </ul>
 
-    <g class="node root">
-      <rect x="14" y={originY - 26} width="104" height="52" rx="5" />
-      <text x="66" y={originY + 5} text-anchor="middle">System</text>
-    </g>
+  </div>
 
+  <figcaption id="topology-caption" class="caption meta">
+    Fig. 0 — building blocks behind the work
+  </figcaption>
+
+  <!-- Inspector: a reserved row, so hovering never covers the diagram or shifts the page. -->
+  <div class="inspector">
+    <p class="hint">Hover or tab through a component; select it to see where it appears.</p>
+    <div class="tip" aria-hidden="true" hidden></div>
+  </div>
+
+  <div class="related" aria-live="polite">
     {
-      branches.map((branch, i) => (
-        <g class="node">
-          <rect x="214" y={rowY(i) - 22} width="232" height="44" rx="5" />
-          <text class="label" x="230" y={rowY(i) - 2}>
-            {branch.label}
-          </text>
-          <text class="note" x="230" y={rowY(i) + 13}>
-            {branch.note}
-          </text>
-          <circle class="pulse" cx="428" cy={rowY(i)} r="3" style={`animation-delay: ${i * 0.45}s`} />
-        </g>
+      view.map((n) => (
+        <div class="related-body" data-related={n.id} data-projects={n.projects.map((p) => p.slug).join(' ')} hidden>
+          <p class="related-title">
+            <span class="meta">Appears in</span>
+            <strong>{n.label}</strong>
+            <button type="button" class="clear meta" data-clear>
+              Clear
+            </button>
+          </p>
+          <ul>
+            {n.related.map((p) => (
+              <li>
+                <a href={href(`/projects/${p.data.slug}`)} class="category" data-category={p.data.category}>
+                  {p.data.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       ))
     }
-  </svg>
-  <figcaption id="system-caption" class="meta">Fig. 0 — where the work sits</figcaption>
+  </div>
+
+  <div hidden>
+    {
+      view.map((n) => (
+        <div id={`topology-desc-${n.id}`} data-desc={n.id}>
+          <strong>{n.label}</strong>
+          <p>{n.context}</p>
+          <p class="tip-related">
+            Appears in {n.related.length === 1 ? '1 project' : `${n.related.length} projects`} · select to list
+          </p>
+        </div>
+      ))
+    }
+  </div>
 </figure>
 
+<script>
+  import type { TopologyScene } from '../scripts/topology-scene';
+  import { signalPath } from '../lib/topology';
+
+  const root = document.querySelector<HTMLElement>('[data-topology]');
+  if (root) init(root);
+
+  function init(root: HTMLElement) {
+    const stage = root.querySelector<HTMLElement>('.stage')!;
+    const svg = root.querySelector<SVGSVGElement>('.plan')!;
+    const canvas = root.querySelector<HTMLCanvasElement>('.gl')!;
+    const tip = root.querySelector<HTMLElement>('.tip')!;
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>('button[data-label]')];
+    const labels = new Map(buttons.map((b) => [b.dataset.label!, b]));
+    const svgNodes = new Map(
+      [...svg.querySelectorAll<SVGGElement>('[data-node]')].map((g) => [g.dataset.node!, g]),
+    );
+    const svgEdges = [...svg.querySelectorAll<SVGGElement>('.edge')];
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let focus: string | null = null; // hover or keyboard focus
+    let selected: string | null = null; // click / Enter
+    let scene: TopologyScene | null = null;
+
+    // --- Emphasis: the node, its connected edges and neighbours; everything else recedes.
+    function paint() {
+      const id = focus ?? selected;
+      const near = new Set(id ? [id, ...(labels.get(id)!.dataset.near ?? '').split(' ')] : []);
+      root.toggleAttribute('data-emphasis', !!id);
+      for (const [key, g] of svgNodes) {
+        g.classList.toggle('is-on', key === id);
+        g.classList.toggle('is-near', near.has(key));
+      }
+      for (const [key, b] of labels) {
+        b.classList.toggle('is-on', key === id);
+        b.classList.toggle('is-near', near.has(key));
+      }
+      for (const e of svgEdges) {
+        e.classList.toggle('is-on', !!id && (e.dataset.from === id || e.dataset.to === id));
+      }
+      scene?.emphasise(id);
+    }
+
+    function showTip(id: string | null) {
+      if (!id) {
+        tip.hidden = true;
+        return;
+      }
+      // A fixed inspector in the diagram's empty corner: it never covers the node or its neighbours.
+      tip.innerHTML = root.querySelector<HTMLElement>(`[data-desc="${id}"]`)?.innerHTML ?? '';
+      tip.hidden = false;
+    }
+
+    function setFocus(id: string | null) {
+      if (id === focus) return;
+      focus = id;
+      paint();
+      showTip(id);
+      if (id) scene?.ring(id);
+    }
+
+    function select(id: string | null) {
+      selected = id && id === selected ? null : id;
+      for (const [key, b] of labels) b.setAttribute('aria-pressed', String(key === selected));
+      let slugs: string[] = [];
+      for (const body of root.querySelectorAll<HTMLElement>('[data-related]')) {
+        const on = body.dataset.related === selected;
+        body.hidden = !on;
+        if (on) slugs = (body.dataset.projects ?? '').split(' ');
+      }
+      document.dispatchEvent(
+        new CustomEvent('topology:select', { detail: { id: selected, projects: slugs } }),
+      );
+      paint();
+      if (selected && signalPath.includes(selected)) replaySignal();
+    }
+
+    function replaySignal() {
+      if (reduced) return;
+      if (scene) scene.playSignal();
+      else svg.querySelector<SVGAnimationElement>('#topology-signal')?.beginElement();
+    }
+
+    // --- SVG and label interaction (always available)
+    for (const [id, g] of svgNodes) {
+      g.addEventListener('pointerenter', () => setFocus(id));
+      g.addEventListener('pointerleave', () => setFocus(null));
+      g.addEventListener('click', () => select(id));
+    }
+    for (const [id, b] of labels) {
+      b.addEventListener('pointerenter', () => setFocus(id));
+      b.addEventListener('pointerleave', () => setFocus(null));
+      b.addEventListener('focus', () => setFocus(id));
+      b.addEventListener('blur', () => setFocus(null));
+      b.addEventListener('click', () => select(id));
+    }
+    root.addEventListener('click', (event) => {
+      if ((event.target as Element).closest('[data-clear]')) select(null);
+    });
+    root.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || (!selected && !focus)) return;
+      const id = selected ?? focus;
+      select(null);
+      setFocus(null);
+      if (id) labels.get(id)?.focus();
+    });
+
+    // --- Optional WebGL layer
+    const webglAvailable = () => {
+      if (new URLSearchParams(location.search).has('svg')) return false;
+      if (matchMedia('(pointer: coarse)').matches && innerWidth < 640) return false;
+      if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return false;
+      try {
+        const probe = document.createElement('canvas');
+        const gl = probe.getContext('webgl2') ?? probe.getContext('webgl');
+        gl?.getExtension('WEBGL_lose_context')?.loseContext();
+        return !!gl;
+      } catch {
+        return false;
+      }
+    };
+
+    let inView = false;
+    const update = () => scene?.setRunning(inView && !document.hidden);
+    const io = new IntersectionObserver(([entry]) => {
+      inView = !!entry?.isIntersecting;
+      if (inView && !scene && !loading) load();
+      update();
+    });
+    io.observe(stage);
+    document.addEventListener('visibilitychange', update);
+
+    let loading = false;
+    async function load() {
+      if (!webglAvailable()) return;
+      loading = true;
+      // The SVG constructs the system on first paint; the WebGL layer takes over after it settles.
+      const settled = new Promise((r) => setTimeout(r, reduced ? 0 : Math.max(0, 3600 - performance.now())));
+      try {
+        const [{ createTopologyScene }] = await Promise.all([import('../scripts/topology-scene'), settled]);
+        scene = createTopologyScene({
+          canvas,
+          labels,
+          reducedMotion: reduced,
+          parallax: matchMedia('(hover: hover) and (pointer: fine)').matches,
+          onHover: setFocus,
+          onPick: select,
+        });
+      } catch {
+        return; // SVG stays
+      }
+      paint();
+      update();
+      requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('gl-ready')));
+    }
+
+    const teardown = () => {
+      root.classList.remove('gl-ready');
+      scene?.destroy();
+      scene = null;
+    };
+    canvas.addEventListener('webglcontextlost', teardown);
+    addEventListener('pagehide', (event) => {
+      if (event.persisted) return update();
+      io.disconnect();
+      teardown();
+    });
+  }
+</script>
+
 <style>
-  .system {
+  .topology {
+    position: relative;
     margin: 0;
   }
 
-  svg {
+  .stage {
+    position: relative;
     width: 100%;
-    height: auto;
+  }
+
+  .plan,
+  .gl {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     display: block;
     overflow: visible;
   }
 
-  .edge {
+  .gl {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 420ms var(--ease);
+  }
+
+  .gl-ready .gl {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .gl-ready .plan {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 420ms var(--ease);
+  }
+
+  /* --- SVG plan */
+  .edge path {
     fill: none;
     stroke: var(--line-strong);
-    stroke-width: 1.25;
+    stroke-width: 1.3;
+    vector-effect: non-scaling-stroke;
+    transition: stroke var(--dur-micro) var(--ease);
   }
 
-  .flow {
-    fill: none;
-    stroke: var(--accent);
-    stroke-width: 1.5;
-    stroke-dasharray: 6 140;
-    stroke-linecap: round;
-    animation: flow 3.5s linear infinite;
+  .edge polygon {
+    fill: var(--line-strong);
+    transition: fill var(--dur-micro) var(--ease);
   }
 
-  .node rect {
-    fill: var(--surface);
+  .node {
+    cursor: pointer;
+    transition: opacity var(--dur-micro) var(--ease);
+  }
+
+  .node polygon {
     stroke: var(--line-strong);
     stroke-width: 1;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    transition:
+      fill var(--dur-micro) var(--ease),
+      stroke var(--dur-micro) var(--ease);
   }
 
-  .root rect {
+  .node .top {
+    fill: var(--topo-top);
+  }
+
+  .node .left {
+    fill: var(--topo-left);
+  }
+
+  .node .right {
+    fill: var(--topo-right);
+  }
+
+  .signal {
+    fill: var(--data);
+  }
+
+  [data-emphasis] .node:not(.is-near),
+  [data-emphasis] .labels li:has(.label:not(.is-near)) {
+    opacity: 0.32;
+  }
+
+  [data-emphasis] .edge:not(.is-on) {
+    opacity: 0.35;
+  }
+
+  .edge.is-on path {
+    stroke: var(--data);
+  }
+
+  .edge.is-on polygon {
+    fill: var(--data);
+  }
+
+  .node.is-on polygon {
     stroke: var(--accent);
   }
 
-  .node text {
-    font-family: var(--font-mono);
-    fill: var(--text);
+  .node.is-on .top {
+    fill: color-mix(in srgb, var(--topo-top) 68%, var(--accent));
   }
 
-  .root text {
-    font-size: 14px;
-    font-weight: 500;
+  /* Construct once: nodes resolve, then edges connect, then one signal runs (SMIL, 1.9s). */
+  @media (prefers-reduced-motion: no-preference) {
+    .node,
+    .labels li {
+      animation: resolve 420ms var(--ease-out) both;
+      animation-delay: calc(160ms + var(--i) * 55ms);
+    }
+
+    .edge path {
+      stroke-dasharray: 1;
+      animation: connect 620ms var(--ease-out) both;
+      animation-delay: calc(820ms + var(--i) * 45ms);
+    }
+
+    .edge polygon {
+      animation: fade 300ms var(--ease) both;
+      animation-delay: calc(1200ms + var(--i) * 45ms);
+    }
   }
 
-  .label {
-    font-size: 13px;
-    font-weight: 500;
+  @media (prefers-reduced-motion: reduce) {
+    .signal {
+      display: none;
+    }
   }
 
-  .note {
-    font-size: 10.5px;
-    fill: var(--faint) !important;
-  }
-
-  .pulse {
-    fill: var(--data);
-    animation: pulse 2.4s ease-in-out infinite;
-  }
-
-  figcaption {
-    margin-top: 0.75rem;
-  }
-
-  @keyframes flow {
+  @keyframes resolve {
     from {
-      stroke-dashoffset: 146;
+      opacity: 0;
+      translate: 0 -6px;
+    }
+  }
+
+  @keyframes connect {
+    from {
+      stroke-dashoffset: 1;
     }
     to {
       stroke-dashoffset: 0;
     }
   }
 
-  @keyframes pulse {
-    0%,
-    100% {
-      opacity: 0.25;
-    }
-    50% {
-      opacity: 1;
+  @keyframes fade {
+    from {
+      opacity: 0;
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .flow {
+  /* --- Labels (the accessible controls) */
+  .labels {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .labels li {
+    position: absolute;
+    transform: translateX(-50%);
+    transition: opacity var(--dur-micro) var(--ease);
+  }
+
+  .label {
+    display: grid;
+    justify-items: center;
+    gap: 0.05rem;
+    padding: 0.1rem 0.35rem 0.15rem;
+    border-radius: var(--radius-sm);
+    /* Edges pass behind labels, as in a drawn diagram. */
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    font-family: var(--font-mono);
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    pointer-events: auto;
+    transition:
+      background-color var(--dur-micro) var(--ease),
+      color var(--dur-micro) var(--ease);
+  }
+
+  .name {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .note {
+    font-size: 0.62rem;
+    color: var(--faint);
+  }
+
+  .label.is-on .name,
+  .label[aria-pressed='true'] .name {
+    color: var(--accent);
+  }
+
+  .label[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .label:focus-visible {
+    outline-offset: 1px;
+  }
+
+  @media (max-width: 40rem) {
+    .note {
       display: none;
     }
 
-    .pulse {
-      animation: none;
-      opacity: 0.8;
+    .name {
+      font-size: 0.64rem;
     }
+  }
+
+  /* --- Caption and inspector */
+  .caption {
+    margin-top: 0.9rem;
+  }
+
+  /* Hint and tip share one grid cell: the row is as tall as the larger of the two. */
+  .inspector {
+    display: grid;
+    min-height: 4.9rem;
+    margin-top: 0.6rem;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+  }
+
+  .inspector > * {
+    grid-area: 1 / 1;
+  }
+
+  @media (max-width: 40rem) {
+    .inspector {
+      min-height: 6.6rem;
+    }
+  }
+
+  .hint {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.8rem;
+    color: var(--faint);
+  }
+
+  .tip:not([hidden]) + .hint,
+  .inspector:has(.tip:not([hidden])) .hint {
+    visibility: hidden;
+  }
+
+  .tip {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: start;
+    gap: 0 1rem;
+    margin: -1px;
+    padding: 0.65rem 0.85rem 0.7rem 1rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    box-shadow: var(--bevel), var(--shadow-1);
+    animation: fade var(--dur-micro) var(--ease);
+  }
+
+  /* Accent rule on the leading edge ties the inspector to the highlighted node. */
+  .tip::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.7rem;
+    bottom: 0.7rem;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  .tip :global(strong) {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .tip :global(p) {
+    grid-column: 1 / -1;
+    margin-top: 0.25rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .tip :global(.tip-related) {
+    grid-column: 2;
+    grid-row: 1;
+    margin-top: 0;
+    align-self: center;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    color: var(--faint);
+  }
+
+  .related-body {
+    margin-top: 0.9rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--bevel), var(--shadow-1);
+    animation: fade var(--dur-ui) var(--ease);
+  }
+
+  .related-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+
+  .related-title strong {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  .clear {
+    margin-left: auto;
+    cursor: pointer;
+  }
+
+  .clear:hover {
+    color: var(--text);
+  }
+
+  .related-body ul {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.6rem;
+  }
+
+  .related-body a {
+    text-decoration: none;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.78rem;
+  }
+
+  .related-body a:hover {
+    color: var(--accent);
   }
 </style>
