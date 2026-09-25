@@ -36,6 +36,11 @@
     radial-gradient(1100px 520px at 12% -8%, rgb(240 166 74 / 0.075), transparent 62%),
     radial-gradient(900px 480px at 92% 2%, rgb(108 196 203 / 0.06), transparent 60%);
   --shadow: var(--bevel), var(--shadow-2);
+
+  /* Isometric topology faces (hero): lit top, two shaded sides. */
+  --topo-top: #1d2125;
+  --topo-left: #15181b;
+  --topo-right: #0f1113;
 }
 
 :root[data-theme='light'] {
@@ -66,6 +71,10 @@
     radial-gradient(1100px 520px at 12% -8%, rgb(154 82 0 / 0.06), transparent 62%),
     radial-gradient(900px 480px at 92% 2%, rgb(15 108 115 / 0.05), transparent 60%);
   --shadow: var(--bevel), var(--shadow-2);
+
+  --topo-top: #ffffff;
+  --topo-left: #ece9e1;
+  --topo-right: #e0dcd2;
 }
 
 :root {
@@ -79,4 +88,14 @@
   --radius-lg: 14px;
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /*
+   * Motion scale. micro: hover, focus, buttons. ui: cards, panels, reveals.
+   * system: topology and data flow. Cinematic sequences (2-6s) live in the
+   * Remotion figures. Data moves linearly; UI eases out; nothing bounces.
+   */
+  --dur-micro: 150ms;
+  --dur-ui: 280ms;
+  --dur-system: 1200ms;
+  --ease-data: linear;
 }

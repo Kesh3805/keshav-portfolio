@@ -101,7 +101,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     }
   </section>
 
-  <section class="container-page block" aria-labelledby="selected-work">
+  <section class="container-page block" aria-labelledby="selected-work" data-reveal>
     <SectionHeader index="01" label="Selected work" id="selected-work">
       <a class="link more" href={href('/projects')}>All projects →</a>
     </SectionHeader>
@@ -113,7 +113,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     </div>
   </section>
 
-  <section class="container-page block" aria-labelledby="areas">
+  <section class="container-page block" aria-labelledby="areas" data-reveal>
     <SectionHeader index="02" label="Engineering areas" id="areas" />
     <ol class="areas">
       {
@@ -139,7 +139,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
 
   {
     experience && (
-      <section class="container-page block" aria-labelledby="experience">
+      <section class="container-page block" aria-labelledby="experience" data-reveal>
         <SectionHeader index="03" label="Experience" id="experience">
           <a class="link more" href={href('/work')}>Work in detail →</a>
         </SectionHeader>
@@ -169,7 +169,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
 
   {
     selectedWriting.length > 0 && (
-      <section class="container-page block" aria-labelledby="writing">
+      <section class="container-page block" aria-labelledby="writing" data-reveal>
         <SectionHeader index="04" label="Selected writing" id="writing">
           <a class="link more" href={href('/writing')}>All writing →</a>
         </SectionHeader>
@@ -180,7 +180,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
 
   {
     hasFocus && nowRendered && (
-      <section class="container-page block" aria-labelledby="focus">
+      <section class="container-page block" aria-labelledby="focus" data-reveal>
         <SectionHeader index="05" label="Current focus" id="focus">
           <a class="link more" href={href('/now')}>/now →</a>
         </SectionHeader>
@@ -191,7 +191,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     )
   }
 
-  <section class="container-page block" aria-labelledby="contact">
+  <section class="container-page block" aria-labelledby="contact" data-reveal>
     <SectionHeader index={hasFocus ? '06' : '05'} label="GitHub / Contact" id="contact" />
     <div class="contact">
       <p>
@@ -243,7 +243,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
 
   @media (min-width: 60rem) {
     .hero-inner {
-      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
     }
   }
 
@@ -276,26 +276,6 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     box-shadow: 0 0 10px var(--ok);
   }
 
-  .pulse::after {
-    content: '';
-    position: absolute;
-    inset: -4px;
-    border-radius: 50%;
-    border: 1px solid var(--ok);
-    animation: ping 2.4s var(--ease-out) infinite;
-  }
-
-  @keyframes ping {
-    0% {
-      transform: scale(0.6);
-      opacity: 0.8;
-    }
-    80%,
-    100% {
-      transform: scale(1.8);
-      opacity: 0;
-    }
-  }
 
   h1 {
     font-size: clamp(2.3rem, 5.6vw, 4rem);
@@ -336,7 +316,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
   }
 
   .hero-visual {
-    max-width: 30rem;
+    max-width: 38rem;
     width: 100%;
     justify-self: center;
   }
@@ -434,12 +414,6 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .pulse::after {
-      animation: none;
-      opacity: 0;
-    }
-  }
   .block {
     margin-top: clamp(4rem, 9vw, 6.5rem);
   }
@@ -559,7 +533,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     text-decoration: none;
-    transition: border-color 160ms var(--ease);
+    transition: border-color var(--dur-micro) var(--ease);
   }
 
   .experience-projects a:hover {

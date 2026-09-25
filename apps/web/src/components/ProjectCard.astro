@@ -19,7 +19,7 @@ const hidden = technologies.length - visible.length;
 const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) : [];
 ---
 
-<article class="card" data-spotlight>
+<article class="card" data-spotlight data-slug={slug}>
   {
     posters.length > 0 && (
       <div class="poster-frame">
@@ -80,6 +80,15 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
     },
     { passive: true },
   );
+
+  // The homepage topology announces a selection; matching cards step forward, the rest recede.
+  document.addEventListener('topology:select', (event) => {
+    const { id, projects } = (event as CustomEvent<{ id: string | null; projects: string[] }>).detail;
+    for (const card of document.querySelectorAll<HTMLElement>('[data-slug]')) {
+      if (!id) delete card.dataset.topology;
+      else card.dataset.topology = projects.includes(card.dataset.slug!) ? 'match' : 'dim';
+    }
+  });
 </script>
 
 <style>
@@ -97,9 +106,19 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
     background: var(--surface);
     box-shadow: var(--bevel), var(--shadow-1);
     transition:
-      border-color 220ms var(--ease),
-      box-shadow 260ms var(--ease),
-      transform 260ms var(--ease-out);
+      border-color var(--dur-ui) var(--ease),
+      box-shadow var(--dur-ui) var(--ease),
+      opacity var(--dur-ui) var(--ease),
+      transform var(--dur-ui) var(--ease-out);
+  }
+
+  .card[data-topology='match'] {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+    box-shadow: var(--bevel), var(--glow-accent);
+  }
+
+  .card[data-topology='dim'] {
+    opacity: 0.5;
   }
 
   /* Cursor spotlight (fill) and a brighter rim that follows it (border). */
@@ -111,7 +130,7 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
     border-radius: inherit;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 260ms var(--ease);
+    transition: opacity var(--dur-ui) var(--ease);
   }
 
   .card::before {
@@ -153,8 +172,9 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
       transition-duration: 80ms;
     }
 
-    .card:hover .poster {
-      transform: scale(1.025);
+    /* Project signal: one accent tick traces the top edge on hover, then stops. */
+    .card:hover .top::after {
+      animation: trace var(--dur-system) var(--ease-data) both;
     }
   }
 
@@ -175,10 +195,10 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
     height: auto;
     aspect-ratio: 16 / 9;
     object-fit: cover;
-    transition: transform 600ms var(--ease-out);
   }
 
   .top {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: baseline;
@@ -218,8 +238,8 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
   .arrow {
     color: var(--faint);
     transition:
-      color 180ms var(--ease),
-      transform 220ms var(--ease-out);
+      color var(--dur-micro) var(--ease),
+      transform var(--dur-micro) var(--ease-out);
   }
 
   .card:hover .arrow {
@@ -251,9 +271,44 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
   @media (prefers-reduced-motion: reduce) {
     .card,
     .card:hover,
-    .card:active,
-    .card:hover .poster {
+    .card:active {
       transform: none;
+    }
+
+    .card:hover .top::after {
+      animation: none;
+    }
+  }
+
+  .top::after {
+    content: '';
+    position: absolute;
+    left: -1.4rem;
+    top: -1.4rem;
+    width: calc(100% + 2.8rem);
+    height: 1px;
+    background: linear-gradient(90deg, transparent 42%, var(--accent) 50%, transparent 58%) 100% 0 / 300% 100%
+      no-repeat;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .poster-frame + .top::after {
+    top: -1.15rem;
+  }
+
+  @keyframes trace {
+    0% {
+      opacity: 0;
+      background-position: 100% 0;
+    }
+    12%,
+    88% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      background-position: 0 0;
     }
   }
 </style>

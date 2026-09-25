@@ -37,5 +37,22 @@ export type Props = SeoProps;
     </main>
     <SiteFooter />
     <ContentScripts />
+    <script>
+      // Section reveals: each [data-reveal] block fades up once as it enters the viewport.
+      const blocks = document.querySelectorAll('[data-reveal]');
+      if (blocks.length) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              entry.target.classList.add('is-revealed');
+              io.unobserve(entry.target);
+            }
+          },
+          { rootMargin: '0px 0px -6% 0px' },
+        );
+        blocks.forEach((block) => io.observe(block));
+      }
+    </script>
   </body>
 </html>

@@ -137,9 +137,9 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
     backdrop-filter: saturate(1.5) blur(14px);
     box-shadow: var(--bevel), var(--shadow-1);
     transition:
-      box-shadow 240ms var(--ease),
-      border-color 240ms var(--ease),
-      background-color 240ms var(--ease);
+      box-shadow var(--dur-ui) var(--ease),
+      border-color var(--dur-ui) var(--ease),
+      background-color var(--dur-ui) var(--ease);
   }
 
   .site-header[data-scrolled] .island {
@@ -201,9 +201,9 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
     text-decoration: none;
     color: var(--muted);
     transition:
-      color 160ms var(--ease),
-      background-color 160ms var(--ease),
-      box-shadow 160ms var(--ease);
+      color var(--dur-micro) var(--ease),
+      background-color var(--dur-micro) var(--ease),
+      box-shadow var(--dur-micro) var(--ease);
   }
 
   .primary a {
@@ -260,8 +260,8 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
     box-shadow: var(--bevel);
     cursor: pointer;
     transition:
-      color 160ms var(--ease),
-      border-color 160ms var(--ease);
+      color var(--dur-micro) var(--ease),
+      border-color var(--dur-micro) var(--ease);
   }
 
   .icon-btn:hover {
