@@ -9,10 +9,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
     "@keshav/motion-tokens": "workspace:*",
     "@remotion/bundler": "4.0.529",
     "@remotion/cli": "4.0.529",
-    "@remotion/google-fonts": "4.0.529",
     "@remotion/renderer": "4.0.529",
     "react": "19.2.3",
     "react-dom": "19.2.3",

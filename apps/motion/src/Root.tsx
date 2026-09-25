@@ -1,4 +1,4 @@
-import { canvas, fps } from '@keshav/motion-tokens';
+import { canvas, fps, outputFrames } from '@keshav/motion-tokens';
 import { Composition } from 'remotion';
 import './fonts';
 import { themed } from './primitives';
@@ -47,7 +47,7 @@ export function Root() {
           id={id}
           component={component}
           defaultProps={{ theme: 'dark' as const }}
-          durationInFrames={durationInFrames}
+          durationInFrames={outputFrames(durationInFrames)}
           fps={fps}
           width={canvas.width}
           height={canvas.height}

@@ -1,6 +1,6 @@
 # Motion storyboards
 
-Every composition is 1280×720 at 30 fps, 16 s, rendered twice: on the dark and on the light site palette (the `theme` input prop). Each one
+Every composition is 1280×720 at 60 fps, 12 s, rendered twice: on the dark and on the light site palette (the `theme` input prop). Each one
 explains one mechanism; the text alternative on the site is `content/site/motion.json`.
 
 Motion vocabulary (see `packages/motion-tokens`):
@@ -13,6 +13,11 @@ Motion vocabulary (see `packages/motion-tokens`):
 | Security boundary | a dashed layer drawn around the nodes it contains         |
 | Failure           | a path stops, or branches into a red terminal state       |
 | Performance       | a long runtime path fades and collapses into a direct one |
+| Arrival / engage  | an expanding ring pulse that damps out                    |
+| Metric            | an odometer whose digit columns roll                      |
+| Discard           | a particle dissolve                                       |
+
+Timelines are authored on a 30 fps, 16 s story clock (`storyScale` in `packages/motion-tokens`) and rendered at 60 fps over 12 s, so every beat keeps its relative timing and gains sub-frame smoothness.
 
 ---
 
