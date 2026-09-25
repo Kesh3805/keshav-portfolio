@@ -1,0 +1,80 @@
+---
+// Progressive enhancement for rendered Markdown. Nothing loads unless the page
+// actually contains a diagram or a code block.
+---
+
+<script>
+  const diagrams = [...document.querySelectorAll<HTMLElement>('pre.mermaid')];
+
+  if (diagrams.length) {
+    for (const el of diagrams) el.dataset.source = el.textContent ?? '';
+
+    const css = (name: string) =>
+      getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+    const renderAll = async () => {
+      const { default: mermaid } = await import('mermaid');
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'strict',
+        theme: 'base',
+        fontFamily: 'IBM Plex Mono, ui-monospace, monospace',
+        flowchart: { curve: 'basis', padding: 12, useMaxWidth: true },
+        themeVariables: {
+          fontSize: '13px',
+          background: css('--surface'),
+          primaryColor: css('--surface-raised'),
+          primaryTextColor: css('--text'),
+          primaryBorderColor: css('--line-strong'),
+          secondaryColor: css('--surface'),
+          tertiaryColor: css('--surface'),
+          lineColor: css('--faint'),
+          textColor: css('--text'),
+          clusterBkg: css('--bg'),
+          clusterBorder: css('--line-strong'),
+          edgeLabelBackground: css('--surface'),
+          nodeTextColor: css('--text'),
+        },
+      });
+      for (const el of diagrams) {
+        el.removeAttribute('data-processed');
+        el.textContent = el.dataset.source ?? '';
+      }
+      await mermaid.run({ nodes: diagrams });
+    };
+
+    // Defer until a diagram is near the viewport so the library never blocks first paint.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          observer.disconnect();
+          void renderAll();
+          document.addEventListener('themechange', () => void renderAll());
+        }
+      },
+      { rootMargin: '400px' },
+    );
+    diagrams.forEach((el) => observer.observe(el));
+  }
+
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+    if (!navigator.clipboard) continue;
+    button.hidden = false;
+    button.addEventListener('click', async () => {
+      const code = button.closest('.code-block')?.querySelector('pre code');
+      if (!code) return;
+      const text = [...code.querySelectorAll('.line')].map((l) => l.textContent).join('\n');
+      try {
+        await navigator.clipboard.writeText(text || code.textContent || '');
+        button.textContent = 'Copied';
+        button.dataset.state = 'copied';
+      } catch {
+        button.textContent = 'Failed';
+      }
+      setTimeout(() => {
+        button.textContent = 'Copy';
+        delete button.dataset.state;
+      }, 1600);
+    });
+  }
+</script>

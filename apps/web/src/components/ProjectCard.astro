@@ -1,0 +1,164 @@
+---
+import { ArrowUpRight } from '@lucide/astro';
+import type { Project } from '../lib/content';
+import { motionMedia } from '../lib/motion';
+import { href } from '../lib/paths';
+
+interface Props {
+  project: Project;
+  index?: number;
+  headingLevel?: 'h2' | 'h3';
+  /** Show the rendered motion poster when one exists. */
+  preview?: boolean;
+}
+
+const { project, index, headingLevel: Heading = 'h3', preview = false } = Astro.props;
+const { title, slug, category, description, technologies, motion } = project.data;
+const visible = technologies.slice(0, 5);
+const hidden = technologies.length - visible.length;
+const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) : [];
+---
+
+<article class="card">
+  {
+    posters.map((v) => (
+      <img
+        class="poster"
+        src={v.poster}
+        alt=""
+        width="1280"
+        height="720"
+        loading="lazy"
+        decoding="async"
+        data-variant={posters.length > 1 ? v.theme : undefined}
+      />
+    ))
+  }
+  <div class="top">
+    <span class="category" data-category={category}>
+      {category === 'professional' ? 'Professional' : 'Personal / Open Source'}
+    </span>
+    {index !== undefined && <span class="meta">{String(index).padStart(2, '0')}</span>}
+  </div>
+
+  <Heading class="title">
+    <a href={href(`/projects/${slug}`)}>
+      {title}
+      <ArrowUpRight size={18} aria-hidden="true" class="arrow" />
+    </a>
+  </Heading>
+  <p class="description">{description}</p>
+
+  <ul class="stack" aria-label="Technologies">
+    {visible.map((tech) => <li class="tag">{tech}</li>)}
+    {hidden > 0 && <li class="tag more">+{hidden}</li>}
+  </ul>
+
+  {motion && !posters.length && <span class="meta has-motion">◧ motion diagram</span>}
+</article>
+
+<style>
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 1.4rem 1.4rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    transition:
+      border-color 180ms var(--ease),
+      transform 180ms var(--ease);
+  }
+
+  .card:hover,
+  .card:focus-within {
+    border-color: var(--line-strong);
+    transform: translateY(-2px);
+  }
+
+  .poster {
+    display: block;
+    width: calc(100% + 2.8rem);
+    max-width: none;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    margin: -1.4rem -1.4rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  :global([data-theme='light']) .poster[data-variant='dark'],
+  :global([data-theme='dark']) .poster[data-variant='light'] {
+    display: none;
+  }
+
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .title {
+    font-size: 1.3rem;
+  }
+
+  .title a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    text-decoration: none;
+  }
+
+  /* Whole card is clickable; the heading link stays the single accessible target. */
+  .title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .title a:focus-visible {
+    outline: none;
+  }
+
+  .card:has(.title a:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .arrow {
+    color: var(--faint);
+    transition:
+      color 180ms var(--ease),
+      transform 180ms var(--ease);
+  }
+
+  .card:hover .arrow {
+    color: var(--accent);
+    transform: translate(2px, -2px);
+  }
+
+  .description {
+    color: var(--muted);
+    font-size: 0.97rem;
+    line-height: 1.55;
+  }
+
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: auto;
+  }
+
+  .more {
+    color: var(--faint);
+  }
+
+  .has-motion {
+    font-size: 0.68rem;
+  }
+</style>

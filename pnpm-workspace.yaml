@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - '@remotion/compositor-linux-x64-gnu'
+  - '@remotion/compositor-win32-x64-msvc'
+  - '@resvg/resvg-js'
+  - esbuild
+  - sharp

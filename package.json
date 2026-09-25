@@ -1,0 +1,30 @@
+{
+  "name": "keshav-portfolio",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.15.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @keshav/web dev",
+    "build": "pnpm --filter @keshav/web build",
+    "preview": "pnpm --filter @keshav/web preview",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @keshav/web test",
+    "check:links": "node scripts/check-links.mjs",
+    "motion:studio": "pnpm --filter @keshav/motion studio",
+    "motion:render": "pnpm --filter @keshav/motion render"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "eslint-plugin-astro": "^3.2.1",
+    "globals": "^17.12.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.1"
+  }
+}

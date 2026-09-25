@@ -1,0 +1,43 @@
+---
+import { href } from '../lib/paths';
+import { site } from '../site.config';
+---
+
+<footer class="site-footer">
+  <div class="container-page inner">
+    <p class="meta">
+      Static HTML · Astro · GitHub Pages · no trackers
+    </p>
+    <ul class="links">
+      <li><a class="link" href={href('/now')}>Now</a></li>
+      <li><a class="link" href={href('/rss.xml')}>RSS</a></li>
+      <li><a class="link" href={site.links.github} rel="me noopener">GitHub</a></li>
+      {site.links.linkedin && <li><a class="link" href={site.links.linkedin} rel="me noopener">LinkedIn</a></li>}
+      {site.links.email && <li><a class="link" href={`mailto:${site.links.email}`}>Email</a></li>}
+    </ul>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: 6rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 2rem 2.5rem;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+</style>

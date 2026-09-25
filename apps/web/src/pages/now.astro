@@ -1,0 +1,45 @@
+---
+import { getEntry, render } from 'astro:content';
+import PageLayout from '../layouts/PageLayout.astro';
+import { formatDate, isoDate } from '../lib/content';
+import { href } from '../lib/paths';
+
+const entry = await getEntry('notes', 'now');
+if (!entry) throw new Error('content/notes/now.md is missing');
+const { Content, headings } = await render(entry);
+const hasContent = headings.length > 0;
+---
+
+<PageLayout
+  title="Now"
+  kicker="/now"
+  description="What Keshav is building, exploring, writing and learning at the moment."
+>
+  <p slot="lede" class="meta lede">
+    {
+      entry.data.updatedAt ? (
+        <>
+          Updated <time datetime={isoDate(entry.data.updatedAt)}>{formatDate(entry.data.updatedAt)}</time>
+        </>
+      ) : (
+        'A page about the present, in the spirit of nownownow.com'
+      )
+    }
+  </p>
+  {
+    hasContent ? (
+      <Content />
+    ) : (
+      <p>
+        Nothing posted here yet. In the meantime, the most recent thinking is in{' '}
+        <a href={href('/writing')}>writing</a>.
+      </p>
+    )
+  }
+</PageLayout>
+
+<style>
+  .lede {
+    margin-top: 1rem;
+  }
+</style>

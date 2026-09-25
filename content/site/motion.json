@@ -1,0 +1,53 @@
+[
+  {
+    "id": "fintax-architecture",
+    "title": "GST Compliance — from GST data to a fast read model",
+    "takeaway": "Returns status is read from a projection kept fresh by domain events, not derived on request.",
+    "steps": [
+      "Invoices, purchase registers and portal data enter as GST data.",
+      "They land in four stores: Books, IMS, GSTR-2B and the GSTR-1 / GSTR-3B filings.",
+      "M9 reconciliation matches Books, IMS and GSTR-2B and classifies each document as EXACT, MISMATCH, MISSING_IN_2B, MISSING_IN_BOOKS or DRIFT; the result is delivered over SSE.",
+      "GSTR-1 and GSTR-3B writers emit source-changed domain events that update a precomputed returns status projection.",
+      "The returns read model serves queries directly: 3,000ms+ before, sub-15ms at peak load after."
+    ]
+  },
+  {
+    "id": "questqr-scan-flow",
+    "title": "Dynamic QR — two concurrent scans, one unit left",
+    "takeaway": "Under concurrent scans, the lock makes the decrement atomic: one unit, one redemption.",
+    "steps": [
+      "Two scans arrive at the same moment for a campaign line with one unit of inventory.",
+      "Both pass pre-validation, which runs before the database is touched.",
+      "Both see inventory available, then contend for the Redis lock; one holds it, the other waits.",
+      "The holder redeems atomically: inventory 1 → 0, scan history recorded, response returned.",
+      "The waiting scan acquires the lock, re-reads inventory at 0 and is rejected — no double redemption.",
+      "Live inventory stats stream to the dashboard over SSE."
+    ]
+  },
+  {
+    "id": "bara-memory-architecture",
+    "title": "BARA — retrieval as a decision",
+    "takeaway": "Retrieval is a decision made by deterministic gates, not a reflex on every message.",
+    "steps": [
+      "Four memory tiers: research memory, conversational state, semantic profile and episodic memory.",
+      "Each message is classified for intent, conversation type and behavioural shift, then threaded to a topic.",
+      "The policy's 41 deterministic gates decide whether to retrieve and from which tiers.",
+      "An acknowledgement-style message retrieves nothing and goes straight to the LLM.",
+      "A message that refers back to earlier decisions opens only the research and episodic tiers.",
+      "Selected context is passed to the multi-provider LLM client, which produces the response."
+    ]
+  },
+  {
+    "id": "antigravity-review-pipeline",
+    "title": "Antigravity — review without write access to main",
+    "takeaway": "Every pass runs inside a disposable worktree; the main branch is never touched.",
+    "steps": [
+      "A pull request labelled review-requested is picked up by the daemon.",
+      "It is checked out into an isolated git worktree at the PR's head commit.",
+      "Five passes run inside the worktree: CodeGraph impact analysis, tenant-isolation AST check, TypeScript, ESLint and dependency-cruiser.",
+      "The evidence gate drops findings without a diff-anchored line.",
+      "The remaining findings are posted as a GitHub review with REQUEST_CHANGES or APPROVE.",
+      "The worktree is removed. The main branch is untouched."
+    ]
+  }
+]

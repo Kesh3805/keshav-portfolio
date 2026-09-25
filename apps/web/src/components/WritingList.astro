@@ -1,0 +1,86 @@
+---
+import { formatDate, isoDate, type Article } from '../lib/content';
+import { href } from '../lib/paths';
+
+interface Props {
+  articles: Article[];
+  headingLevel?: 'h2' | 'h3';
+}
+
+const { articles, headingLevel: Heading = 'h3' } = Astro.props;
+---
+
+<ol class="writing">
+  {
+    articles.map((article) => (
+      <li>
+        <time class="meta" datetime={isoDate(article.data.publishedAt)}>
+          {formatDate(article.data.publishedAt)}
+        </time>
+        <div>
+          <Heading class="title">
+            <a href={href(`/writing/${article.data.slug}`)}>{article.data.title}</a>
+          </Heading>
+          <p>{article.data.description}</p>
+        </div>
+        <ul class="tags" aria-label="Tags">
+          {article.data.tags.slice(0, 3).map((tag) => (
+            <li class="tag">{tag}</li>
+          ))}
+        </ul>
+      </li>
+    ))
+  }
+</ol>
+
+<style>
+  .writing {
+    border-top: 1px solid var(--line);
+  }
+
+  .writing > li {
+    position: relative;
+    display: grid;
+    gap: 0.5rem 2rem;
+    padding-block: 1.35rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  @media (min-width: 52rem) {
+    .writing > li {
+      grid-template-columns: 8rem minmax(0, 1fr) auto;
+      align-items: baseline;
+    }
+  }
+
+  .title {
+    font-size: 1.15rem;
+  }
+
+  .title a {
+    text-decoration: none;
+  }
+
+  .title a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .writing > li:hover .title {
+    color: var(--accent);
+  }
+
+  p {
+    margin-top: 0.35rem;
+    color: var(--muted);
+    font-size: 0.97rem;
+    max-width: 42rem;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+</style>

@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+dist/
+.astro/
+public/generated/
+content/**/*.md
+content/**/*.mdx
+# prettier-plugin-astro rewrites inline whitespace inside links; ESLint covers .astro files.
+**/*.astro

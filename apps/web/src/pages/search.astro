@@ -1,0 +1,178 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { href } from '../lib/paths';
+---
+
+<BaseLayout title="Search" description="Search projects and writing." noindex>
+  <div class="container-page page">
+    <header>
+      <p class="meta">Index</p>
+      <h1>Search</h1>
+    </header>
+
+    <form class="search" role="search" data-search data-index={href('/search.json')}>
+      <label for="q" class="meta">Projects, writing, tags, headings</label>
+      <input
+        id="q"
+        name="q"
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="e.g. redis, SSE, tenant isolation"
+      />
+    </form>
+
+    <p class="status meta" role="status" aria-live="polite" data-search-status>
+      Type to search.
+    </p>
+    <ol class="results" data-search-results></ol>
+
+    <noscript>
+      <p>Search needs JavaScript. Browse <a class="link" href={href('/projects')}>projects</a> or <a class="link" href={href('/writing')}>writing</a> instead.</p>
+    </noscript>
+  </div>
+</BaseLayout>
+
+<script>
+  import type { SearchDoc } from './search.json';
+
+  const form = document.querySelector<HTMLFormElement>('[data-search]')!;
+  const input = form.querySelector<HTMLInputElement>('input')!;
+  const status = document.querySelector<HTMLElement>('[data-search-status]')!;
+  const list = document.querySelector<HTMLOListElement>('[data-search-results]')!;
+
+  let docs: SearchDoc[] | undefined;
+  const load = async (): Promise<SearchDoc[]> =>
+    (docs ??= (await fetch(form.dataset.index!).then((r) => r.json())) as SearchDoc[]);
+
+  const fields = (d: SearchDoc) => [
+    [d.title, 8],
+    [d.tags.join(' '), 5],
+    [d.headings.join(' '), 3],
+    [d.description, 2],
+  ] as const;
+
+  const score = (doc: SearchDoc, terms: string[]) => {
+    let total = 0;
+    for (const term of terms) {
+      let best = 0;
+      for (const [text, weight] of fields(doc)) {
+        if (text.toLowerCase().includes(term)) best = Math.max(best, weight);
+      }
+      if (best === 0) return 0; // every term must match somewhere
+      total += best;
+    }
+    return total;
+  };
+
+  const render = (results: SearchDoc[], query: string) => {
+    list.replaceChildren(
+      ...results.map((doc) => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = doc.url;
+        a.textContent = doc.title;
+        const meta = document.createElement('span');
+        meta.className = 'meta';
+        meta.textContent =
+          doc.type === 'writing' ? 'Writing' : doc.category === 'professional' ? 'Professional project' : 'Personal project';
+        const p = document.createElement('p');
+        p.textContent = doc.description;
+        li.append(meta, a, p);
+        return li;
+      }),
+    );
+    status.textContent = query
+      ? `${results.length} result${results.length === 1 ? '' : 's'} for “${query}”`
+      : 'Type to search.';
+  };
+
+  const run = async () => {
+    const query = input.value.trim();
+    const params = new URLSearchParams(location.search);
+    if (query) params.set('q', query);
+    else params.delete('q');
+    history.replaceState(null, '', `${location.pathname}${params.size ? `?${params}` : ''}`);
+    if (!query) return render([], '');
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const all = await load();
+    const results = all
+      .map((doc) => ({ doc, s: score(doc, terms) }))
+      .filter((r) => r.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .map((r) => r.doc);
+    render(results, query);
+  };
+
+  form.addEventListener('submit', (event) => event.preventDefault());
+  input.addEventListener('input', () => void run());
+
+  const initial = new URLSearchParams(location.search).get('q');
+  if (initial) {
+    input.value = initial;
+    void run();
+  }
+  input.focus();
+</script>
+
+<style>
+  .page {
+    display: grid;
+    gap: 1.5rem;
+    max-width: 48rem;
+    padding-top: clamp(2rem, 6vw, 4rem);
+  }
+
+  h1 {
+    margin-top: 0.5rem;
+    font-size: clamp(2.2rem, 6vw, 3.4rem);
+    letter-spacing: -0.035em;
+  }
+
+  .search {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  input {
+    width: 100%;
+    font: inherit;
+    font-size: 1.15rem;
+    padding: 0.85rem 1rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+  }
+
+  input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .results {
+    border-top: 1px solid var(--line);
+  }
+
+  .results :global(li) {
+    display: grid;
+    gap: 0.3rem;
+    padding-block: 1.1rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .results :global(a) {
+    font-size: 1.15rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .results :global(a:hover) {
+    color: var(--accent);
+  }
+
+  .results :global(p) {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+</style>

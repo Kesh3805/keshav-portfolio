@@ -1,0 +1,16 @@
+---
+import { getEntry, render } from 'astro:content';
+import PageLayout from '../layouts/PageLayout.astro';
+
+const entry = await getEntry('notes', 'about');
+if (!entry) throw new Error('content/notes/about.md is missing');
+const { Content } = await render(entry);
+---
+
+<PageLayout
+  title="About"
+  kicker="Engineer"
+  description="Keshav, software engineer at jpteam / C1X Inc.: production backends, async systems, tenant isolation and AI infrastructure."
+>
+  <Content />
+</PageLayout>

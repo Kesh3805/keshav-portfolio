@@ -1,0 +1,425 @@
+---
+import { ArrowRight } from '@lucide/astro';
+import { getCollection, getEntry, render } from 'astro:content';
+import ProjectCard from '../components/ProjectCard.astro';
+import SectionHeader from '../components/SectionHeader.astro';
+import SystemDiagram from '../components/SystemDiagram.astro';
+import WritingList from '../components/WritingList.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getArticles, getExperience, getProjects, getProjectsBySlug } from '../lib/content';
+import { href } from '../lib/paths';
+import { site } from '../site.config';
+
+const projects = await getProjects();
+const featured = projects.filter((p) => p.data.featured);
+const professional = projects.filter((p) => p.data.category === 'professional');
+const personal = projects.filter((p) => p.data.category === 'personal');
+
+const [experience] = await getExperience();
+const experienceProjects = experience ? await getProjectsBySlug(experience.data.projects) : [];
+
+const areas = (await getCollection('areas')).sort((a, b) => a.data.order - b.data.order);
+const titleOf = new Map(projects.map((p) => [p.data.slug, p.data.title]));
+for (const area of areas) {
+  for (const slug of area.data.projects) {
+    if (!titleOf.has(slug)) throw new Error(`Area "${area.id}" references unknown project "${slug}"`);
+  }
+}
+
+const articles = await getArticles();
+const selectedWriting = [
+  ...articles.filter((a) => a.data.featured),
+  ...articles.filter((a) => !a.data.featured),
+].slice(0, 4);
+
+const now = await getEntry('notes', 'now');
+const nowRendered = now ? await render(now) : undefined;
+const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
+---
+
+<BaseLayout>
+  <section class="hero grid-backdrop" aria-labelledby="hero-title">
+    <div class="container-page hero-inner">
+      <div class="hero-copy">
+        <p class="meta hero-kicker">Keshav · Software Engineer · jpteam / C1X Inc.</p>
+        <h1 id="hero-title">{site.headline}</h1>
+        <p class="lede">
+          Production backends for GST compliance, document AI and real-time workflows at work.
+          Retrieval gating, content forensics and review tooling on my own time. This site is where
+          both get written down.
+        </p>
+        <div class="ctas">
+          <a class="btn btn-primary" href={href('/work')}>
+            Explore Work <ArrowRight size={16} aria-hidden="true" />
+          </a>
+          <a class="btn" href={href('/writing')}>Read Writing</a>
+          <a class="link github" href={site.links.github} rel="me noopener">github.com/Kesh3805</a>
+        </div>
+        <dl class="stats">
+          {
+            site.stats.map((stat) => (
+              <div>
+                <dt class="meta">{stat.label}</dt>
+                <dd>{stat.value}</dd>
+              </div>
+            ))
+          }
+          <div>
+            <dt class="meta">projects documented</dt>
+            <dd>{professional.length} + {personal.length}</dd>
+          </div>
+        </dl>
+      </div>
+      <div class="hero-visual">
+        <SystemDiagram />
+      </div>
+    </div>
+  </section>
+
+  <section class="container-page block" aria-labelledby="selected-work">
+    <SectionHeader index="01" label="Selected work" id="selected-work">
+      <a class="link more" href={href('/projects')}>All projects →</a>
+    </SectionHeader>
+    <p class="intro">
+      Chosen because each shows a different kind of problem — not a ranking.
+    </p>
+    <div class="cards">
+      {featured.map((project, i) => <ProjectCard project={project} index={i + 1} preview />)}
+    </div>
+  </section>
+
+  <section class="container-page block" aria-labelledby="areas">
+    <SectionHeader index="02" label="Engineering areas" id="areas" />
+    <ol class="areas">
+      {
+        areas.map((area, i) => (
+          <li>
+            <span class="meta area-index">{`0${i + 1}`}</span>
+            <div>
+              <h3>{area.data.title}</h3>
+              <p>{area.data.summary}</p>
+              <p class="area-links meta">
+                {area.data.projects.map((slug) => (
+                  <a class="link" href={href(`/projects/${slug}`)}>
+                    {titleOf.get(slug)}
+                  </a>
+                ))}
+              </p>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  {
+    experience && (
+      <section class="container-page block" aria-labelledby="experience">
+        <SectionHeader index="03" label="Experience" id="experience">
+          <a class="link more" href={href('/work')}>Work in detail →</a>
+        </SectionHeader>
+        <div class="experience">
+          <div>
+            <p class="meta">{experience.data.employmentType}</p>
+            <h3>{experience.data.role}</h3>
+            <p class="company">{experience.data.company}</p>
+          </div>
+          <div>
+            <p class="experience-desc">{experience.data.description}</p>
+            <ul class="experience-projects">
+              {experienceProjects.map((project) => (
+                <li>
+                  <a href={href(`/work#${project.data.slug}`)}>
+                    <span>{project.data.title}</span>
+                    <span class="meta">{project.data.role?.split('·')[0]?.trim()}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    selectedWriting.length > 0 && (
+      <section class="container-page block" aria-labelledby="writing">
+        <SectionHeader index="04" label="Selected writing" id="writing">
+          <a class="link more" href={href('/writing')}>All writing →</a>
+        </SectionHeader>
+        <WritingList articles={selectedWriting} />
+      </section>
+    )
+  }
+
+  {
+    hasFocus && nowRendered && (
+      <section class="container-page block" aria-labelledby="focus">
+        <SectionHeader index="05" label="Current focus" id="focus">
+          <a class="link more" href={href('/now')}>/now →</a>
+        </SectionHeader>
+        <div class="prose focus">
+          <nowRendered.Content />
+        </div>
+      </section>
+    )
+  }
+
+  <section class="container-page block" aria-labelledby="contact">
+    <SectionHeader index={hasFocus ? '06' : '05'} label="GitHub / Contact" id="contact" />
+    <div class="contact">
+      <p>
+        Code for the personal projects is public on GitHub. Professional work happened in employer
+        repositories; this site describes what I built there.
+      </p>
+      <ul>
+        <li>
+          <a class="btn" href={site.links.github} rel="me noopener">GitHub · Kesh3805</a>
+        </li>
+        {
+          site.links.linkedin && (
+            <li>
+              <a class="btn" href={site.links.linkedin} rel="me noopener">LinkedIn</a>
+            </li>
+          )
+        }
+        {
+          site.links.email && (
+            <li>
+              <a class="btn" href={`mailto:${site.links.email}`}>Email</a>
+            </li>
+          )
+        }
+        {
+          site.links.resume && (
+            <li>
+              <a class="btn" href={site.links.resume}>Résumé</a>
+            </li>
+          )
+        }
+      </ul>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .hero-inner {
+    display: grid;
+    gap: 3rem;
+    padding-block: clamp(3rem, 8vw, 6rem) clamp(2.5rem, 6vw, 4.5rem);
+    align-items: center;
+  }
+
+  @media (min-width: 60rem) {
+    .hero-inner {
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    }
+  }
+
+  .hero-kicker {
+    margin-bottom: 1.25rem;
+  }
+
+  h1 {
+    font-size: clamp(2.1rem, 5.2vw, 3.6rem);
+    letter-spacing: -0.035em;
+    line-height: 1.04;
+    max-width: 20ch;
+  }
+
+  .lede {
+    margin-top: 1.5rem;
+    max-width: 38rem;
+    font-size: 1.12rem;
+    color: var(--muted);
+  }
+
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin-top: 2rem;
+  }
+
+  .github {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem 2.5rem;
+    margin-top: 2.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .stats div {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 0.2rem;
+  }
+
+  .stats dd {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-visual {
+    max-width: 30rem;
+    width: 100%;
+    justify-self: center;
+  }
+
+  .block {
+    margin-top: clamp(4rem, 9vw, 6.5rem);
+  }
+
+  .more {
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .intro {
+    color: var(--muted);
+    margin: -0.75rem 0 1.5rem;
+  }
+
+  .cards {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @media (min-width: 44rem) {
+    .cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .areas {
+    display: grid;
+    border-top: 1px solid var(--line);
+  }
+
+  .areas li {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: 1rem;
+    padding-block: 1.4rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  @media (min-width: 60rem) {
+    .areas li > div {
+      display: grid;
+      grid-template-columns: 16rem minmax(0, 1fr) 14rem;
+      gap: 2rem;
+      align-items: baseline;
+    }
+  }
+
+  .area-index {
+    padding-top: 0.2rem;
+  }
+
+  .areas h3 {
+    font-size: 1.05rem;
+  }
+
+  .areas p {
+    color: var(--muted);
+    margin-top: 0.35rem;
+  }
+
+  .area-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.9rem;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .experience {
+    display: grid;
+    gap: 1.5rem 3rem;
+    padding: 1.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  @media (min-width: 52rem) {
+    .experience {
+      grid-template-columns: 16rem minmax(0, 1fr);
+    }
+  }
+
+  .experience h3 {
+    font-size: 1.35rem;
+    margin-top: 0.4rem;
+  }
+
+  .company {
+    color: var(--muted);
+    margin-top: 0.2rem;
+  }
+
+  .experience-desc {
+    color: var(--muted);
+    max-width: 44rem;
+  }
+
+  .experience-projects {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+  }
+
+  @media (min-width: 40rem) {
+    .experience-projects {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .experience-projects a {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    text-decoration: none;
+    transition: border-color 160ms var(--ease);
+  }
+
+  .experience-projects a:hover {
+    border-color: var(--accent);
+  }
+
+  .contact {
+    display: grid;
+    gap: 1.25rem;
+    max-width: 44rem;
+  }
+
+  .contact p {
+    color: var(--muted);
+  }
+
+  .contact ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+</style>

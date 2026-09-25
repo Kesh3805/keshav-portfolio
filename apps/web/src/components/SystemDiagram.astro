@@ -1,0 +1,154 @@
+---
+// Small hero visual: one system fanning out into the layers the work spans.
+// Pure SVG + CSS; the dashes stop under prefers-reduced-motion.
+const branches = [
+  { label: 'API', note: 'NestJS · REST · SSE' },
+  { label: 'Data', note: 'PostgreSQL · MySQL · pgvector' },
+  { label: 'Queue', note: 'BullMQ · Redis' },
+  { label: 'AI', note: 'LlamaIndex · RAG · LLM clients' },
+  { label: 'Infrastructure', note: 'GCP · Docker · GitHub Actions' },
+];
+const rowY = (i: number) => 38 + i * 68;
+const originY = rowY(2);
+---
+
+<figure class="system" aria-labelledby="system-caption">
+  <svg viewBox="0 0 460 380" role="img" aria-labelledby="system-title">
+    <title id="system-title">
+      A system node connected to API, Data, Queue, AI and Infrastructure layers.
+    </title>
+    <g class="edges">
+      {
+        branches.map((_, i) => {
+          const y = rowY(i);
+          const d = `M 118 ${originY} H 150 Q 162 ${originY} 162 ${originY + Math.sign(y - originY) * 12} V ${y - Math.sign(y - originY) * 12} Q 162 ${y} 174 ${y} H 214`;
+          const path = y === originY ? `M 118 ${originY} H 214` : d;
+          return (
+            <>
+              <path class="edge" d={path} />
+              <path class="flow" d={path} style={`animation-delay: ${i * -0.7}s`} />
+            </>
+          );
+        })
+      }
+    </g>
+
+    <g class="node root">
+      <rect x="14" y={originY - 26} width="104" height="52" rx="5" />
+      <text x="66" y={originY + 5} text-anchor="middle">System</text>
+    </g>
+
+    {
+      branches.map((branch, i) => (
+        <g class="node">
+          <rect x="214" y={rowY(i) - 22} width="232" height="44" rx="5" />
+          <text class="label" x="230" y={rowY(i) - 2}>
+            {branch.label}
+          </text>
+          <text class="note" x="230" y={rowY(i) + 13}>
+            {branch.note}
+          </text>
+          <circle class="pulse" cx="428" cy={rowY(i)} r="3" style={`animation-delay: ${i * 0.45}s`} />
+        </g>
+      ))
+    }
+  </svg>
+  <figcaption id="system-caption" class="meta">Fig. 0 — where the work sits</figcaption>
+</figure>
+
+<style>
+  .system {
+    margin: 0;
+  }
+
+  svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    overflow: visible;
+  }
+
+  .edge {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1.25;
+  }
+
+  .flow {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 140;
+    stroke-linecap: round;
+    animation: flow 3.5s linear infinite;
+  }
+
+  .node rect {
+    fill: var(--surface);
+    stroke: var(--line-strong);
+    stroke-width: 1;
+  }
+
+  .root rect {
+    stroke: var(--accent);
+  }
+
+  .node text {
+    font-family: var(--font-mono);
+    fill: var(--text);
+  }
+
+  .root text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .label {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .note {
+    font-size: 10.5px;
+    fill: var(--faint) !important;
+  }
+
+  .pulse {
+    fill: var(--data);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  figcaption {
+    margin-top: 0.75rem;
+  }
+
+  @keyframes flow {
+    from {
+      stroke-dashoffset: 146;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flow {
+      display: none;
+    }
+
+    .pulse {
+      animation: none;
+      opacity: 0.8;
+    }
+  }
+</style>

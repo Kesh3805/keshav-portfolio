@@ -1,0 +1,352 @@
+---
+import { ArrowLeft, ExternalLink } from '@lucide/astro';
+import { render } from 'astro:content';
+import MotionFigure from '../../components/MotionFigure.astro';
+import Toc from '../../components/Toc.astro';
+import WritingList from '../../components/WritingList.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getArticlesForProject, getProjects, tagSlug, type Project } from '../../lib/content';
+import { href } from '../../lib/paths';
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.map((project) => ({ params: { slug: project.data.slug }, props: { project, projects } }));
+}
+
+interface Props {
+  project: Project;
+  projects: Project[];
+}
+
+const { project, projects } = Astro.props;
+const { data } = project;
+const { Content, headings } = await render(project);
+const related = await getArticlesForProject(data.slug);
+
+const siblings = projects.filter((p) => p.data.category === data.category);
+const position = siblings.findIndex((p) => p.id === project.id);
+const next = siblings[(position + 1) % siblings.length];
+const categoryLabel = data.category === 'professional' ? 'Professional' : 'Personal / Open Source';
+---
+
+<BaseLayout title={data.title} description={data.description} ogImage={`projects/${data.slug}`}>
+  <article class="container-page project">
+    <header class="head">
+      <a class="back meta" href={href(data.category === 'professional' ? '/work' : '/projects')}>
+        <ArrowLeft size={14} aria-hidden="true" />
+        {data.category === 'professional' ? 'Work' : 'Projects'}
+      </a>
+      <p class="category" data-category={data.category}>{categoryLabel}</p>
+      <h1>{data.title}</h1>
+      <p class="description">{data.description}</p>
+    </header>
+
+    <aside class="spec" aria-label="Project details">
+      <dl>
+        {
+          data.role && (
+            <div>
+              <dt class="meta">Role</dt>
+              <dd>{data.role}</dd>
+            </div>
+          )
+        }
+        {
+          data.repository && (
+            <div>
+              <dt class="meta">Repository</dt>
+              <dd>
+                <a class="link" href={data.repository} rel="noopener">
+                  {data.repository.replace('https://github.com/', '')}
+                  <ExternalLink size={12} aria-hidden="true" />
+                </a>
+              </dd>
+            </div>
+          )
+        }
+        {
+          data.liveUrl && (
+            <div>
+              <dt class="meta">Live</dt>
+              <dd>
+                <a class="link" href={data.liveUrl} rel="noopener">
+                  {new URL(data.liveUrl).host}
+                  <ExternalLink size={12} aria-hidden="true" />
+                </a>
+              </dd>
+            </div>
+          )
+        }
+        <div class="wide">
+          <dt class="meta">Technology</dt>
+          <dd>
+            <ul class="stack">
+              {data.technologies.map((tech) => <li class="tag">{tech}</li>)}
+            </ul>
+          </dd>
+        </div>
+        {
+          data.tags.length > 0 && (
+            <div class="wide">
+              <dt class="meta">Topics</dt>
+              <dd>
+                <ul class="stack">
+                  {data.tags.map((tag) => (
+                    <li>
+                      <a class="tag" href={href(`/tags/${tagSlug(tag)}`)}>
+                        #{tag}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          )
+        }
+      </dl>
+
+      {
+        data.metrics.length > 0 && (
+          <ul class="metrics" aria-label="Figures from the work">
+            {data.metrics.map((metric) => (
+              <li>
+                <span class="value">{metric.value}</span>
+                <span class="meta">{metric.label}</span>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </aside>
+
+    {
+      data.motion && (
+        <div class="visual">
+          <MotionFigure name={data.motion} />
+        </div>
+      )
+    }
+
+    <div class="body">
+      <div class="toc-col">
+        <div class="toc-sticky">
+          <Toc
+            headings={headings}
+            extra={related.length ? [{ slug: 'related-writing', text: 'Related Writing' }] : []}
+          />
+        </div>
+      </div>
+      <div class="content">
+        <div class="prose">
+          <Content />
+        </div>
+
+        {
+          related.length > 0 && (
+            <section class="related" aria-labelledby="related-writing">
+              <h2 class="section-label" id="related-writing">
+                Related writing
+              </h2>
+              <WritingList articles={related} />
+            </section>
+          )
+        }
+
+        {
+          next && next.id !== project.id && (
+            <nav class="next" aria-label="Next project">
+              <span class="meta">Next · {categoryLabel}</span>
+              <a href={href(`/projects/${next.data.slug}`)}>{next.data.title} →</a>
+            </nav>
+          )
+        }
+      </div>
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .project {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
+    padding-top: clamp(2rem, 6vw, 4rem);
+  }
+
+  @media (min-width: 64rem) {
+    .project {
+      grid-template-columns: minmax(0, 1fr) 22rem;
+      column-gap: 4rem;
+    }
+
+    .head {
+      grid-column: 1;
+    }
+
+    .spec {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+    }
+
+    .visual {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .body {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    text-decoration: none;
+    margin-bottom: 1.5rem;
+  }
+
+  .back:hover {
+    color: var(--text);
+  }
+
+  h1 {
+    margin-top: 0.75rem;
+    font-size: clamp(2.2rem, 6vw, 3.4rem);
+    letter-spacing: -0.035em;
+  }
+
+  .description {
+    margin-top: 1rem;
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 40rem;
+  }
+
+  .spec {
+    align-self: start;
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .spec dl {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .spec dd {
+    margin-top: 0.3rem;
+    font-size: 0.93rem;
+    overflow-wrap: anywhere;
+  }
+
+  .spec dd a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    margin-top: 1.25rem;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .metrics li {
+    display: grid;
+    gap: 0.3rem;
+    align-content: start;
+    padding: 0.8rem;
+    background: var(--surface);
+  }
+
+  .metrics .value {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .metrics .meta {
+    font-size: 0.65rem;
+    line-height: 1.4;
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+
+  .body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+
+  @media (min-width: 64rem) {
+    .body {
+      grid-template-columns: 13rem minmax(0, 1fr);
+      column-gap: 4rem;
+    }
+
+    .toc-sticky {
+      position: sticky;
+      top: 5.5rem;
+    }
+  }
+
+  @media (max-width: 63.99rem) {
+    .toc-col {
+      display: none;
+    }
+  }
+
+  .content {
+    min-width: 0;
+  }
+
+  .content .prose > :global(h2:first-child) {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .related {
+    margin-top: 4rem;
+    max-width: var(--measure);
+  }
+
+  .related h2 {
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+
+  .next {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    max-width: var(--measure);
+  }
+
+  .next a {
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .next a:hover {
+    color: var(--accent);
+  }
+</style>

@@ -1,0 +1,49 @@
+/* Dark is the default; the colour values mirror packages/motion-tokens. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0e1011;
+  --surface: #15181a;
+  --surface-raised: #1b1f22;
+  --line: #2a2f33;
+  --line-strong: #3b4247;
+  --text: #e8e6e1;
+  --muted: #a3a9ac;
+  --faint: #7f868b;
+  --accent: #f0a64a;
+  --accent-ink: #1a1206;
+  --data: #6cc4cb;
+  --ok: #7fc486;
+  --error: #e5675e;
+  --grid: rgb(255 255 255 / 0.035);
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 12px 32px -18px rgb(0 0 0 / 0.8);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f6f4ef;
+  --surface: #fdfcf9;
+  --surface-raised: #ffffff;
+  --line: #dedad0;
+  --line-strong: #c4bfb2;
+  --text: #1a1c1d;
+  --muted: #545b5f;
+  --faint: #5f676c;
+  --accent: #9a5200;
+  --accent-ink: #ffffff;
+  --data: #0f6c73;
+  --ok: #2e6f36;
+  --error: #b3342b;
+  --grid: rgb(0 0 0 / 0.04);
+  --shadow: 0 12px 32px -22px rgb(40 30 10 / 0.35);
+}
+
+:root {
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --measure: 44rem;
+  --page: 76rem;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  --radius: 6px;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}

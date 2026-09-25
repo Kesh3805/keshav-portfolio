@@ -1,0 +1,37 @@
+[
+  {
+    "id": "backend",
+    "title": "Backend & domain modelling",
+    "summary": "NestJS services with the Repository Pattern enforced between layers, GST math on Decimal.js, and invoice edits routed through the aggregate root so totals are never computed against an intermediate state.",
+    "projects": ["fintax", "questqr", "groupkart"],
+    "order": 1
+  },
+  {
+    "id": "async",
+    "title": "Async & real-time systems",
+    "summary": "BullMQ pipelines between services, Redis-locked redemption under concurrent scans, and a durable SSE stream with heartbeats and Last-Event-ID replay.",
+    "projects": ["fintax", "questqr", "dhvvs"],
+    "order": 2
+  },
+  {
+    "id": "security",
+    "title": "Multi-tenancy & security",
+    "summary": "ABAC at the foundation, tenant scoping centralised from 19 ad-hoc filters into one service guarded by a CI lint rule, and an IDOR test matrix across mutation routes.",
+    "projects": ["fintax", "antigravity-pr-reviewer"],
+    "order": 3
+  },
+  {
+    "id": "ai",
+    "title": "AI infrastructure",
+    "summary": "Document-AI extraction with a classification guard in front of OCR, and a four-tier memory architecture where retrieval is decided by 41 deterministic gates.",
+    "projects": ["fintax", "bara", "acfs"],
+    "order": 4
+  },
+  {
+    "id": "devinfra",
+    "title": "Developer infrastructure",
+    "summary": "Static-analysis PR gates, an E2E suite cut from 26 Testcontainer boots to 1, and a Rust PR reviewer that runs in isolated worktrees and cannot push.",
+    "projects": ["fintax", "antigravity-pr-reviewer"],
+    "order": 5
+  }
+]

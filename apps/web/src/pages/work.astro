@@ -1,0 +1,248 @@
+---
+import { ArrowRight } from '@lucide/astro';
+import { render } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getExperience, getProjectsBySlug } from '../lib/content';
+import { href } from '../lib/paths';
+
+const experiences = await getExperience();
+const sections = await Promise.all(
+  experiences.map(async (experience) => {
+    const { Content } = await render(experience);
+    const projects = await Promise.all(
+      (await getProjectsBySlug(experience.data.projects)).map(async (project) => ({
+        project,
+        chapters: (await render(project)).headings.filter((h) => h.depth === 2),
+      })),
+    );
+    return { experience, Content, projects };
+  }),
+);
+---
+
+<BaseLayout
+  title="Work"
+  description="Software Engineer at jpteam / C1X Inc.: production microservices across FinTech compliance, Document AI, enterprise conversational AI and high-concurrency dynamic media platforms."
+>
+  <div class="container-page page">
+    <header class="page-head">
+      <p class="meta">Professional engineering</p>
+      <h1>Work</h1>
+      <p class="lede">
+        {sections.map(({ experience }) => `${experience.data.role} · ${experience.data.company}`).join(' · ')}
+      </p>
+    </header>
+
+    {
+      sections.map(({ experience, Content, projects }) => (
+        <section class="employer" aria-labelledby={`employer-${experience.id}`}>
+          <header class="employer-head">
+            <div>
+              <p class="meta">{experience.data.employmentType}</p>
+              <h2 id={`employer-${experience.id}`}>{experience.data.role}</h2>
+              <p class="company">{experience.data.company}</p>
+            </div>
+            <div class="employer-desc">
+              <p>{experience.data.description}</p>
+              <div class="note">
+                <Content />
+              </div>
+            </div>
+          </header>
+
+          <ol class="projects">
+            {projects.map(({ project, chapters }, i) => (
+              <li id={project.data.slug} class="project">
+                <div class="project-meta">
+                  <span class="meta index">{`0${i + 1}`}</span>
+                  <p class="meta">{project.data.role}</p>
+                </div>
+                <div class="project-body">
+                  <h3>{project.data.title}</h3>
+                  <p class="description">{project.data.description}</p>
+
+                  {project.data.metrics.length > 0 && (
+                    <ul class="metrics">
+                      {project.data.metrics.map((m) => (
+                        <li>
+                          <span class="value">{m.value}</span> <span class="meta">{m.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <ul class="stack" aria-label="Technologies">
+                    {project.data.technologies.map((tech) => (
+                      <li class="tag">{tech}</li>
+                    ))}
+                  </ul>
+
+                  {chapters.length > 0 && (
+                    <nav class="chapters" aria-label={`${project.data.title} sections`}>
+                      {chapters.map((c) => (
+                        <a href={href(`/projects/${project.data.slug}#${c.slug}`)}>{c.text}</a>
+                      ))}
+                    </nav>
+                  )}
+
+                  <a class="btn read" href={href(`/projects/${project.data.slug}`)}>
+                    Read the {project.data.title} write-up <ArrowRight size={15} aria-hidden="true" />
+                  </a>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    padding-top: clamp(2rem, 6vw, 4rem);
+  }
+
+  h1 {
+    margin-top: 0.5rem;
+    font-size: clamp(2.2rem, 6vw, 3.4rem);
+    letter-spacing: -0.035em;
+  }
+
+  .lede {
+    margin-top: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .employer {
+    margin-top: clamp(2.5rem, 6vw, 4rem);
+  }
+
+  .employer-head {
+    display: grid;
+    gap: 1.5rem 4rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  @media (min-width: 56rem) {
+    .employer-head {
+      grid-template-columns: 18rem minmax(0, 1fr);
+    }
+  }
+
+  .employer-head h2 {
+    font-size: 1.6rem;
+    margin-top: 0.4rem;
+  }
+
+  .company {
+    color: var(--accent);
+    font-weight: 500;
+    margin-top: 0.2rem;
+  }
+
+  .employer-desc {
+    max-width: 44rem;
+    font-size: 1.05rem;
+  }
+
+  .note {
+    margin-top: 0.75rem;
+    color: var(--muted);
+  }
+
+  .project {
+    display: grid;
+    gap: 1rem 4rem;
+    padding-block: 2.25rem;
+    border-bottom: 1px solid var(--line);
+    scroll-margin-top: 4.5rem;
+  }
+
+  @media (min-width: 56rem) {
+    .project {
+      grid-template-columns: 18rem minmax(0, 1fr);
+    }
+  }
+
+  .project-meta {
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+  }
+
+  .project-meta .meta {
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+
+  .index {
+    color: var(--accent) !important;
+  }
+
+  .project-body {
+    display: grid;
+    gap: 1rem;
+    max-width: 48rem;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+  }
+
+  .description {
+    color: var(--muted);
+    font-size: 1.05rem;
+  }
+
+  .metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+  }
+
+  .metrics .value {
+    font-family: var(--font-mono);
+    font-weight: 500;
+  }
+
+  .metrics .meta {
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .chapters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    font-size: 0.88rem;
+  }
+
+  .chapters a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .chapters a::before {
+    content: '§ ';
+    color: var(--faint);
+  }
+
+  .chapters a:hover {
+    color: var(--text);
+  }
+
+  .read {
+    justify-self: start;
+    margin-top: 0.5rem;
+  }
+</style>

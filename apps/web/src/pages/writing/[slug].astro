@@ -1,0 +1,198 @@
+---
+import { ArrowLeft } from '@lucide/astro';
+import { render } from 'astro:content';
+import ProjectCard from '../../components/ProjectCard.astro';
+import Toc from '../../components/Toc.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import {
+  formatDate,
+  getArticles,
+  getProjectsBySlug,
+  isoDate,
+  tagSlug,
+  type Article,
+} from '../../lib/content';
+import { href } from '../../lib/paths';
+
+export async function getStaticPaths() {
+  const articles = await getArticles();
+  return articles.map((article) => ({ params: { slug: article.data.slug }, props: { article } }));
+}
+
+interface Props {
+  article: Article;
+}
+
+const { article } = Astro.props;
+const { data } = article;
+const { Content, headings } = await render(article);
+const projects = await getProjectsBySlug(data.relatedProjects);
+const words = (article.body ?? '').split(/\s+/).filter(Boolean).length;
+const minutes = Math.max(1, Math.round(words / 220));
+---
+
+<BaseLayout
+  title={data.title}
+  description={data.description}
+  type="article"
+  publishedAt={data.publishedAt}
+  ogImage={`writing/${data.slug}`}
+>
+  <article class="container-page article">
+    <header class="head">
+      <a class="back meta" href={href('/writing')}>
+        <ArrowLeft size={14} aria-hidden="true" /> Writing
+      </a>
+      <p class="meta byline">
+        <time datetime={isoDate(data.publishedAt)}>{formatDate(data.publishedAt)}</time>
+        {
+          data.updatedAt && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>
+                updated <time datetime={isoDate(data.updatedAt)}>{formatDate(data.updatedAt)}</time>
+              </span>
+            </>
+          )
+        }
+        <span aria-hidden="true">·</span>
+        <span>{minutes} min read</span>
+        {data.draft && <span class="draft">draft</span>}
+      </p>
+      <h1>{data.title}</h1>
+      <p class="description">{data.description}</p>
+      <ul class="tags" aria-label="Tags">
+        {
+          data.tags.map((tag) => (
+            <li>
+              <a class="tag" href={href(`/tags/${tagSlug(tag)}`)}>
+                #{tag}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </header>
+
+    <div class="body">
+      <div class="prose">
+        <Content />
+      </div>
+      <aside class="toc-col" aria-label="Contents">
+        <div class="toc-sticky">
+          <Toc headings={headings} />
+        </div>
+      </aside>
+    </div>
+
+    <section class="related" aria-labelledby="from-project">
+      <h2 class="section-label" id="from-project">From the project</h2>
+      <div class="cards">
+        {projects.map((project) => <ProjectCard project={project} />)}
+      </div>
+    </section>
+  </article>
+</BaseLayout>
+
+<style>
+  .article {
+    padding-top: clamp(2rem, 6vw, 4rem);
+  }
+
+  .head {
+    max-width: 48rem;
+  }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    text-decoration: none;
+    margin-bottom: 1.5rem;
+  }
+
+  .back:hover {
+    color: var(--text);
+  }
+
+  .byline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .draft {
+    color: var(--error);
+  }
+
+  h1 {
+    margin-top: 0.9rem;
+    font-size: clamp(2rem, 5.5vw, 3.1rem);
+    letter-spacing: -0.03em;
+  }
+
+  .description {
+    margin-top: 1rem;
+    font-size: 1.15rem;
+    color: var(--muted);
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 1.5rem;
+  }
+
+  .body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--line);
+  }
+
+  @media (min-width: 64rem) {
+    .body {
+      grid-template-columns: minmax(0, var(--measure)) 14rem;
+      justify-content: space-between;
+      column-gap: 4rem;
+    }
+
+    .toc-sticky {
+      position: sticky;
+      top: 5.5rem;
+    }
+  }
+
+  @media (max-width: 63.99rem) {
+    .toc-col {
+      display: none;
+    }
+  }
+
+  .body .prose > :global(:first-child) {
+    margin-top: 0;
+  }
+
+  .related {
+    margin-top: 5rem;
+  }
+
+  .related h2 {
+    margin-bottom: 1.25rem;
+    font-weight: 500;
+  }
+
+  .cards {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @media (min-width: 44rem) {
+    .cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

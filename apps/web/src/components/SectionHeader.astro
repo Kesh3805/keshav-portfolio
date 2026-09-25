@@ -1,0 +1,33 @@
+---
+interface Props {
+  index: string;
+  label: string;
+  id?: string;
+}
+
+const { index, label, id } = Astro.props;
+---
+
+<div class="section-header">
+  <h2 class="section-label" id={id}><span class="index">{index}</span>{label}</h2>
+  <slot />
+</div>
+
+<style>
+  .section-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 1.5rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .section-header > h2 {
+    flex: 1 1 18rem;
+    font-weight: 500;
+  }
+
+  .index {
+    color: var(--accent);
+  }
+</style>

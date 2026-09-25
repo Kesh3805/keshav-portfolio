@@ -1,0 +1,85 @@
+---
+import ProjectCard from '../../components/ProjectCard.astro';
+import SectionHeader from '../../components/SectionHeader.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getProjects } from '../../lib/content';
+import { href } from '../../lib/paths';
+
+const professional = await getProjects('professional');
+const personal = await getProjects('personal');
+---
+
+<BaseLayout
+  title="Projects"
+  description="Professional projects from jpteam / C1X Inc. and personal / open-source systems: AI memory, content forensics, health-visit verification and automated code review."
+>
+  <div class="container-page page">
+    <header class="page-head">
+      <p class="meta">Index</p>
+      <h1>Projects</h1>
+      <p class="lede">
+        Two groups, kept apart on purpose. Professional work was built inside a team at jpteam / C1X
+        Inc.; personal projects are my own repositories.
+      </p>
+    </header>
+
+    <section aria-labelledby="professional">
+      <SectionHeader index="A" label="Professional" id="professional">
+        <a class="link more" href={href('/work')}>Read as work history →</a>
+      </SectionHeader>
+      <div class="cards">
+        {professional.map((project, i) => <ProjectCard project={project} index={i + 1} />)}
+      </div>
+    </section>
+
+    <section aria-labelledby="personal">
+      <SectionHeader index="B" label="Personal / Open Source" id="personal" />
+      <div class="cards">
+        {personal.map((project, i) => <ProjectCard project={project} index={i + 1} />)}
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    display: grid;
+    gap: clamp(3rem, 7vw, 5rem);
+    padding-top: clamp(2rem, 6vw, 4rem);
+  }
+
+  h1 {
+    margin-top: 0.5rem;
+    font-size: clamp(2.2rem, 6vw, 3.4rem);
+    letter-spacing: -0.035em;
+  }
+
+  .lede {
+    margin-top: 1rem;
+    max-width: 40rem;
+    color: var(--muted);
+    font-size: 1.1rem;
+  }
+
+  .more {
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .cards {
+    display: grid;
+    gap: 1rem;
+  }
+
+  @media (min-width: 44rem) {
+    .cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 72rem) {
+    .cards {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+</style>

@@ -1,0 +1,245 @@
+---
+import { Menu, Search, X } from '@lucide/astro';
+import { href } from '../lib/paths';
+import { nav, site } from '../site.config';
+import ThemeToggle from './ThemeToggle.astro';
+
+const current = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/';
+const isActive = (path: string) => current === path || current.startsWith(`${path}/`);
+---
+
+<header class="site-header">
+  <a class="skip sr-only-focusable" href="#main">Skip to content</a>
+  <div class="container-page bar">
+    <a class="wordmark" href={href('/')}>
+      <span class="mark" aria-hidden="true">k/</span>
+      <span>{site.name}</span>
+    </a>
+
+    <nav class="primary" aria-label="Primary">
+      <ul>
+        {
+          nav.map((item) => (
+            <li>
+              <a href={href(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}>
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+        <li>
+          <a href={site.links.github} rel="me noopener">
+            GitHub<span class="sr-only"> (external)</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="tools">
+      <a class="icon-btn" href={href('/search')} aria-label="Search">
+        <Search size={16} aria-hidden="true" />
+      </a>
+      <ThemeToggle />
+      <button
+        type="button"
+        class="icon-btn menu-btn"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+        data-menu-toggle
+      >
+        <Menu class="menu-open" size={18} aria-hidden="true" />
+        <X class="menu-close" size={18} aria-hidden="true" />
+        <span class="sr-only">Menu</span>
+      </button>
+    </div>
+  </div>
+
+  <nav id="mobile-menu" class="mobile" aria-label="Mobile" hidden>
+    <ul class="container-page">
+      {
+        nav.map((item) => (
+          <li>
+            <a href={href(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}>
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+      <li><a href={href('/now')}>Now</a></li>
+      <li>
+        <a href={site.links.github} rel="me noopener">
+          GitHub
+        </a>
+      </li>
+    </ul>
+  </nav>
+</header>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+  const menu = document.getElementById('mobile-menu');
+
+  const setOpen = (open: boolean) => {
+    if (!toggle || !menu) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    menu.hidden = !open;
+  };
+
+  toggle?.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && toggle?.getAttribute('aria-expanded') === 'true') {
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+
+  matchMedia('(min-width: 48rem)').addEventListener('change', (event) => {
+    if (event.matches) setOpen(false);
+  });
+</script>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: saturate(1.2) blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .skip {
+    position: absolute;
+    left: 1rem;
+    top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: var(--radius);
+    z-index: 30;
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    height: 3.75rem;
+  }
+
+  .wordmark {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+  }
+
+  .mark {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .primary {
+    margin-left: auto;
+  }
+
+  .primary ul {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .primary a,
+  .mobile a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--muted);
+    transition: color 160ms var(--ease);
+  }
+
+  .primary a {
+    font-size: 0.92rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: var(--radius);
+  }
+
+  .primary a:hover,
+  .mobile a:hover {
+    color: var(--text);
+  }
+
+  .primary a[aria-current='page'],
+  .mobile a[aria-current='page'] {
+    color: var(--text);
+    box-shadow: inset 0 -1px 0 var(--accent);
+  }
+
+  .tools {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .icon-btn:hover {
+    color: var(--text);
+    border-color: var(--line-strong);
+  }
+
+  .icon-btn :global(svg) {
+    grid-area: 1 / 1;
+  }
+
+  .menu-btn[aria-expanded='false'] .menu-close,
+  .menu-btn[aria-expanded='true'] .menu-open {
+    display: none;
+  }
+
+  .mobile {
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  .mobile ul {
+    display: grid;
+    padding-block: 0.5rem 1rem;
+  }
+
+  .mobile a {
+    width: 100%;
+    padding: 0.8rem 0;
+    font-size: 1.05rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  @media (max-width: 47.99rem) {
+    .primary {
+      display: none;
+    }
+
+    .tools {
+      margin-left: auto;
+    }
+  }
+
+  @media (min-width: 48rem) {
+    .menu-btn,
+    .mobile {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,61 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { href } from '../lib/paths';
+---
+
+<BaseLayout title="Not found" description="This page does not exist." noindex>
+  <div class="container-page page">
+    <p class="meta">HTTP 404</p>
+    <h1>Nothing is listening on this path.</h1>
+    <pre class="trace" aria-label="Lookup trace"><code><span class="dim">GET</span> <span data-path>this page</span>
+<span class="dim">  →</span> route table ........ <span class="miss">miss</span>
+<span class="dim">  →</span> static assets ...... <span class="miss">miss</span>
+<span class="dim">  →</span> response ........... 404, and at least it says so</code></pre>
+    <p class="lede">
+      Unlike some integrations, this one reports failure honestly. Try the
+      <a class="link" href={href('/')}>homepage</a>, <a class="link" href={href('/projects')}>projects</a>
+      or <a class="link" href={href('/search')}>search</a>.
+    </p>
+  </div>
+</BaseLayout>
+
+<script>
+  const target = document.querySelector('[data-path]');
+  if (target) target.textContent = location.pathname;
+</script>
+
+<style>
+  .page {
+    display: grid;
+    gap: 1.5rem;
+    max-width: 44rem;
+    padding-block: clamp(3rem, 10vw, 7rem) 2rem;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5.5vw, 3rem);
+    letter-spacing: -0.03em;
+  }
+
+  .trace {
+    font-size: 0.85rem;
+    line-height: 1.8;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    overflow-x: auto;
+  }
+
+  .dim {
+    color: var(--faint);
+  }
+
+  .miss {
+    color: var(--error);
+  }
+
+  .lede {
+    color: var(--muted);
+  }
+</style>

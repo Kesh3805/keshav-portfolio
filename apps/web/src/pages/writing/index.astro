@@ -1,0 +1,72 @@
+---
+import WritingList from '../../components/WritingList.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getArticles, tagSlug } from '../../lib/content';
+import { href } from '../../lib/paths';
+
+const articles = await getArticles();
+const tags = [...new Set(articles.flatMap((a) => a.data.tags))].sort();
+---
+
+<BaseLayout
+  title="Writing"
+  description="Engineering write-ups from real systems: read models, silent integration failures, queue keyspaces, durable SSE, retrieval gating and safe automated review."
+>
+  <div class="container-page page">
+    <header>
+      <p class="meta">Notebook</p>
+      <h1>Writing</h1>
+      <p class="lede">
+        Each piece starts from something that happened in a system I worked on: what broke or was
+        slow, what constrained the fix, and what I would keep from it.
+      </p>
+      <a class="link rss meta" href={href('/rss.xml')}>RSS feed</a>
+    </header>
+
+    {
+      tags.length > 0 && (
+        <nav class="tags" aria-label="Topics">
+          {tags.map((tag) => (
+            <a class="tag" href={href(`/tags/${tagSlug(tag)}`)}>
+              #{tag}
+            </a>
+          ))}
+        </nav>
+      )
+    }
+
+    <WritingList articles={articles} headingLevel="h2" />
+  </div>
+</BaseLayout>
+
+<style>
+  .page {
+    display: grid;
+    gap: 2.5rem;
+    padding-top: clamp(2rem, 6vw, 4rem);
+  }
+
+  h1 {
+    margin-top: 0.5rem;
+    font-size: clamp(2.2rem, 6vw, 3.4rem);
+    letter-spacing: -0.035em;
+  }
+
+  .lede {
+    margin-top: 1rem;
+    max-width: 40rem;
+    color: var(--muted);
+    font-size: 1.1rem;
+  }
+
+  .rss {
+    display: inline-block;
+    margin-top: 1rem;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+</style>

@@ -1,0 +1,236 @@
+---
+import { getEntry } from 'astro:content';
+import { motionMedia } from '../lib/motion';
+
+interface Props {
+  name: string;
+  label?: string;
+}
+
+const { name, label = 'Fig. 1' } = Astro.props;
+const entry = await getEntry('motion', name);
+if (!entry) throw new Error(`No storyboard in content/site/motion.json for "${name}"`);
+
+// One video per rendered theme; CSS shows the one matching the page theme.
+// Without rendered media the figure falls back to the storyboard text below.
+const variants = motionMedia(name).filter((v) => v.webm || v.mp4);
+const themed = variants.length > 1;
+const stepsId = `${name}-steps`;
+---
+
+<figure class="motion" data-motion>
+  <div class="frame">
+    {
+      variants.length ? (
+        variants.map((v) => (
+          <video
+            muted
+            playsinline
+            loop
+            preload="none"
+            poster={v.poster}
+            width="1280"
+            height="720"
+            aria-describedby={stepsId}
+            data-motion-video
+            data-variant={themed ? v.theme : undefined}
+          >
+            {v.mp4 && <source src={v.mp4} type="video/mp4" />}
+            {v.webm && <source src={v.webm} type="video/webm" />}
+          </video>
+        ))
+      ) : (
+        <div class="placeholder">
+          <span class="meta">{import.meta.env.DEV ? 'motion not rendered — run pnpm motion:render' : 'animation unavailable — sequence below'}</span>
+        </div>
+      )
+    }
+    {
+      variants.length > 0 && (
+        <button type="button" class="play" data-motion-toggle aria-pressed="false">
+          Play
+        </button>
+      )
+    }
+  </div>
+  <figcaption>
+    <p class="caption"><span class="meta">{label}</span> {entry.data.title}</p>
+    <details class="steps">
+      <summary>Read the sequence</summary>
+      <ol id={stepsId}>
+        {entry.data.steps.map((step) => <li>{step}</li>)}
+      </ol>
+      <p class="takeaway">{entry.data.takeaway}</p>
+    </details>
+  </figcaption>
+</figure>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+  for (const figure of document.querySelectorAll<HTMLElement>('[data-motion]')) {
+    const videos = [...figure.querySelectorAll<HTMLVideoElement>('[data-motion-video]')];
+    const toggle = figure.querySelector<HTMLButtonElement>('[data-motion-toggle]');
+    if (!videos.length || !toggle) continue;
+
+    // The visible variant is the one CSS didn't hide for the current theme.
+    const active = () => videos.find((v) => v.offsetParent !== null) ?? videos[0]!;
+    let visible = false;
+    let userPaused = false;
+    let last: HTMLVideoElement | undefined;
+
+    const sync = () => {
+      const playing = !active().paused;
+      toggle.textContent = playing ? 'Pause' : 'Play';
+      toggle.setAttribute('aria-pressed', String(playing));
+    };
+    const update = () => {
+      const current = active();
+      // Continue the sequence where the other theme's video was, not from its own last position.
+      if (last && last !== current) current.currentTime = last.currentTime;
+      last = current;
+      for (const v of videos) if (v !== current) v.pause();
+      if (visible && !reduce.matches && !userPaused) void current.play().catch(() => {});
+      else current.pause();
+      sync();
+    };
+
+    for (const v of videos) {
+      v.addEventListener('play', sync);
+      v.addEventListener('pause', sync);
+    }
+
+    toggle.addEventListener('click', () => {
+      const current = active();
+      if (current.paused) {
+        userPaused = false;
+        void current.play();
+      } else {
+        userPaused = true;
+        current.pause();
+      }
+    });
+
+    document.addEventListener('themechange', update);
+
+    // Autoplay only while visible, and never under reduced motion.
+    new IntersectionObserver(
+      ([entry]) => {
+        visible = Boolean(entry?.isIntersecting);
+        update();
+      },
+      { threshold: 0.5 },
+    ).observe(figure.querySelector('.frame')!);
+  }
+</script>
+<style>
+  .motion {
+    margin: 0;
+  }
+
+  .frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  :global([data-theme='light']) video[data-variant='dark'],
+  :global([data-theme='dark']) video[data-variant='light'] {
+    display: none !important;
+  }
+
+  video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .placeholder {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .placeholder .meta {
+    color: var(--muted);
+  }
+
+  .play {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.65rem;
+    color: var(--text);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    border: 1px solid var(--line-strong);
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .play:hover {
+    border-color: var(--accent);
+  }
+
+  figcaption {
+    margin-top: 0.85rem;
+  }
+
+  .caption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    align-items: baseline;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  .steps {
+    margin-top: 0.5rem;
+    font-size: 0.93rem;
+  }
+
+  .steps summary {
+    cursor: pointer;
+    width: fit-content;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+
+  .steps summary:hover {
+    color: var(--text);
+  }
+
+  .steps ol {
+    list-style: decimal;
+    padding-left: 1.4rem;
+    margin-top: 0.75rem;
+    display: grid;
+    gap: 0.35rem;
+    color: var(--muted);
+  }
+
+  .steps ol ::marker {
+    font-family: var(--font-mono);
+    color: var(--faint);
+  }
+
+  .takeaway {
+    margin-top: 0.75rem;
+    padding-left: 0.9rem;
+    border-left: 2px solid var(--accent);
+  }
+</style>
