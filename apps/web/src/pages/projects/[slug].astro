@@ -8,6 +8,7 @@ import WritingList from '../../components/WritingList.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getArticlesForProject, getProjects, tagSlug, type Project } from '../../lib/content';
 import { href } from '../../lib/paths';
+import { nodes as topology } from '../../lib/topology';
 
 export async function getStaticPaths() {
   const projects = await getProjects();
@@ -28,9 +29,30 @@ const siblings = projects.filter((p) => p.data.category === data.category);
 const position = siblings.findIndex((p) => p.id === project.id);
 const next = siblings[(position + 1) % siblings.length];
 const categoryLabel = data.category === 'professional' ? 'Professional' : 'Personal / Open Source';
+
+// Continuity between case studies: the building blocks this project and the next one share.
+const uses = (slug: string) => new Set(topology.filter((n) => n.projects.some((p) => p.slug === slug)).map((n) => n.label));
+const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug).has(label)) : [];
 ---
 
 <BaseLayout title={data.title} description={data.description} ogImage={`projects/${data.slug}`}>
+  <script is:inline slot="head">
+    // Cross-document view transition: the next-project title morphs into the next page's heading.
+    addEventListener('pageswap', (event) => {
+      const link = document.querySelector('[data-next-link]');
+      if (event.viewTransition && link && event.activation?.entry?.url === link.href) {
+        link.querySelector('[data-next-title]').style.viewTransitionName = 'project-title';
+      }
+    });
+    addEventListener('pagereveal', (event) => {
+      const from = window.navigation?.activation?.from?.url ?? '';
+      if (!event.viewTransition || !from.includes('/projects/')) return;
+      const title = document.querySelector('[data-project-title]');
+      if (!title) return;
+      title.style.viewTransitionName = 'project-title';
+      event.viewTransition.finished.finally(() => (title.style.viewTransitionName = ''));
+    });
+  </script>
   <article class="container-page project">
     <header class="head">
       <a class="back meta" href={href(data.category === 'professional' ? '/work' : '/projects')}>
@@ -38,7 +60,7 @@ const categoryLabel = data.category === 'professional' ? 'Professional' : 'Perso
         {data.category === 'professional' ? 'Work' : 'Projects'}
       </a>
       <p class="category" data-category={data.category}>{categoryLabel}</p>
-      <h1>{data.title}</h1>
+      <h1 data-project-title>{data.title}</h1>
       <p class="description">{data.description}</p>
     </header>
 
@@ -162,8 +184,13 @@ const categoryLabel = data.category === 'professional' ? 'Professional' : 'Perso
         {
           next && next.id !== project.id && (
             <nav class="next" aria-label="Next project">
-              <span class="meta">Next · {categoryLabel}</span>
-              <a href={href(`/projects/${next.data.slug}`)}>{next.data.title} →</a>
+              <span class="meta">
+                Next · {categoryLabel}
+                {shared.length > 0 && <span class="shared"> · shares {shared.join(', ')}</span>}
+              </span>
+              <a href={href(`/projects/${next.data.slug}`)} data-next-link>
+                <span data-next-title>{next.data.title}</span> →
+              </a>
             </nav>
           )
         }

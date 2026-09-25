@@ -25,6 +25,12 @@
   navigation: auto;
 }
 
+/* Case-study continuity: the next-project title becomes the next page's heading. */
+::view-transition-group(project-title) {
+  animation-duration: 360ms;
+  animation-timing-function: var(--ease-out);
+}
+
 @layer base {
   html {
     background: var(--bg);
