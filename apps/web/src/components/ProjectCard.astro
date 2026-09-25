@@ -90,11 +90,6 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
     border-radius: var(--radius) var(--radius) 0 0;
   }
 
-  :global([data-theme='light']) .poster[data-variant='dark'],
-  :global([data-theme='dark']) .poster[data-variant='light'] {
-    display: none;
-  }
-
   .top {
     display: flex;
     justify-content: space-between;
@@ -106,10 +101,13 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
   }
 
   .title a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
     text-decoration: none;
+  }
+
+  .title :global(.arrow) {
+    display: inline-block;
+    margin-left: 0.3rem;
+    vertical-align: -0.1em;
   }
 
   /* Whole card is clickable; the heading link stays the single accessible target. */

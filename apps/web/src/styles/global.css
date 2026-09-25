@@ -79,6 +79,12 @@
   }
 }
 
+/* Theme-specific media (motion videos, posters): show only the variant for the active theme. */
+:root[data-theme='light'] [data-variant='dark'],
+:root[data-theme='dark'] [data-variant='light'] {
+  display: none !important;
+}
+
 @layer components {
   .container-page {
     width: 100%;
