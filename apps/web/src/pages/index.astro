@@ -219,7 +219,12 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
         {
           site.links.resume && (
             <li>
-              <a class="btn" href={site.links.resume}>Résumé</a>
+              <a
+                class="btn"
+                href={/^https?:/.test(site.links.resume) ? site.links.resume : href(site.links.resume)}
+              >
+                Résumé
+              </a>
             </li>
           )
         }

@@ -28,3 +28,9 @@ The engineering around models rather than the models themselves: classification 
 | Queues | BullMQ, Apache Kafka, Redpanda |
 | Cloud & DevOps | GCP, AWS S3, Docker, GitHub Actions, Turborepo, Neon, Vercel |
 | Testing | Jest, Testcontainers, Allure, pytest, DVC |
+
+## Contact & links
+
+- LinkedIn: [linkedin.com/in/keshav-ashokkumar](https://www.linkedin.com/in/keshav-ashokkumar/)
+- Email: [amkeshav382005@gmail.com](mailto:amkeshav382005@gmail.com)
+- GitHub: [github.com/Kesh3805](https://github.com/Kesh3805)

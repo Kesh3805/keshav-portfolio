@@ -8,8 +8,9 @@ export const site = {
   links: {
     github: 'https://github.com/Kesh3805',
     // Rendered only when set. Fill these in rather than inventing them.
-    linkedin: undefined as string | undefined,
-    email: undefined as string | undefined,
+    linkedin: 'https://www.linkedin.com/in/keshav-ashokkumar/' as string | undefined,
+    email: 'amkeshav382005@gmail.com' as string | undefined,
+    // An absolute URL, or a site path such as '/keshav-resume.pdf' (the base path is added for you).
     resume: undefined as string | undefined,
   },
   stats: [{ value: '83', label: 'public repositories' }],
