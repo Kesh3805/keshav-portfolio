@@ -75,3 +75,35 @@ Timelines are authored on a 30 fps, 16 s story clock (`storyScale` in `packages/
 5. The worktree boundary dissolves. `MAIN BRANCH / UNTOUCHED`.
 
 **Takeaway.** Main branch untouched.
+
+---
+
+## AcfsForensicReport
+
+**Concept.** Evidence stays tied to its source: the report carries the SHA-256 of the original artifact.
+
+**States.**
+
+1. Artifact node; its SHA-256 digest is computed first and pinned beneath it.
+2. Three independent lanes read the same file: ViT / DeiT classifier, Error Level Analysis, EXIF anomaly check. Each packet carries the digest.
+3. The classifier lane continues to a Grad-CAM heatmap.
+4. Findings converge on the PDF forensic report; its rows fill in.
+5. The intake digest travels along a dashed provenance path and is printed as "SHA-256 of original".
+
+**Grounding.** `content/projects/acfs.md` (architecture diagram, "PDF forensic report generator that includes a SHA-256 hash of the original artifact"). The digest value is illustrative. The text lanes (RoBERTa / DeBERTa, stylometry, SHAP) are left out to keep the figure to one modality.
+
+---
+
+## DhvvsProofChain
+
+**Concept.** Anchor a hash, not the record — and a retroactive edit becomes visible.
+
+**States.**
+
+1. Chain: presence (NFC / QR + GPS) → ECDSA sign on device → NestJS ingestion → BullMQ → EVM L2.
+2. The signed payload is verified and persisted as a PostgreSQL visit record.
+3. A BullMQ job anchors the record's hash on-chain.
+4. Failure: one field (timestamp) is edited after anchoring; the recomputed hash no longer matches — MISMATCH.
+5. Restore: the original value hashes to the anchored value again — MATCH.
+
+**Grounding.** `content/projects/dhvvs.md` (proof chain, "Once on-chain, no database admin can retroactively alter it", "Anchor a hash, not the record"). The hash check illustrates that property; field values and hashes are illustrative.

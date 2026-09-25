@@ -32,6 +32,8 @@ const OUTPUTS = {
   QrRedemptionFlow: 'questqr-scan-flow',
   BaraMemoryArchitecture: 'bara-memory-architecture',
   AntigravityReviewPipeline: 'antigravity-review-pipeline',
+  AcfsForensicReport: 'acfs-forensic-report',
+  DhvvsProofChain: 'dhvvs-proof-chain',
 };
 const COMPOSITIONS = Object.keys(OUTPUTS);
 const fileName = (id) => OUTPUTS[id];

@@ -11,6 +11,8 @@ import {
   GstReturnsArchitecture,
   GST_RETURNS_DURATION,
 } from './compositions/GstReturnsArchitecture';
+import { AcfsForensicReport, ACFS_DURATION } from './compositions/AcfsForensicReport';
+import { DhvvsProofChain, DHVVS_DURATION } from './compositions/DhvvsProofChain';
 import { QrRedemptionFlow, QR_REDEMPTION_DURATION } from './compositions/QrRedemptionFlow';
 
 // Output filenames for each id are mapped in scripts/render.mjs. The `theme`
@@ -35,6 +37,16 @@ export const compositions = [
     id: 'AntigravityReviewPipeline',
     component: themed(AntigravityReviewPipeline),
     durationInFrames: ANTIGRAVITY_DURATION,
+  },
+  {
+    id: 'AcfsForensicReport',
+    component: themed(AcfsForensicReport),
+    durationInFrames: ACFS_DURATION,
+  },
+  {
+    id: 'DhvvsProofChain',
+    component: themed(DhvvsProofChain),
+    durationInFrames: DHVVS_DURATION,
   },
 ] as const;
 

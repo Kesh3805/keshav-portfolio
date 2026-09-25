@@ -28,6 +28,7 @@ tags:
   - Blockchain
   - Distributed Systems
 order: 14
+motion: dhvvs-proof-chain
 ---
 
 ## Problem

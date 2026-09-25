@@ -49,5 +49,30 @@
       "The remaining findings are posted as a GitHub review with REQUEST_CHANGES or APPROVE.",
       "The worktree is removed. The main branch is untouched."
     ]
+  },
+  {
+    "id": "acfs-forensic-report",
+    "title": "ACFS — every finding points back to one file",
+    "takeaway": "The report carries the SHA-256 of the original artifact, so its findings stay tied to the exact file they describe.",
+    "steps": [
+      "An artifact arrives and the SHA-256 hash of the original is computed before any analysis.",
+      "Independent analyses read the same file: a fine-tuned ViT / DeiT classifier, error level analysis and EXIF anomaly checks.",
+      "The classifier's attention is rendered as a Grad-CAM heatmap.",
+      "Each finding flows into one PDF forensic report.",
+      "The digest computed at intake is printed in the report as the SHA-256 of the original."
+    ]
+  },
+  {
+    "id": "dhvvs-proof-chain",
+    "title": "DHVVS — anchor a hash, and any edit shows",
+    "takeaway": "The chain stores a hash of the verified visit, so a retroactive edit to the database record no longer matches it.",
+    "steps": [
+      "An NFC tag or encrypted QR proves presence at the patient's door; GPS geofencing adds a second assertion.",
+      "The visit payload is ECDSA-signed on the health worker's device before any network call.",
+      "The NestJS API verifies the signature and persists the record in PostgreSQL.",
+      "A BullMQ job anchors a hash of the verified record on an EVM Layer-2.",
+      "If a field is edited afterwards, the record's hash no longer matches the anchored hash.",
+      "Restoring the original record makes the hashes match again."
+    ]
   }
 ]
