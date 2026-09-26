@@ -25,6 +25,28 @@
   navigation: auto;
 }
 
+/* Theme switch: the old frame stays still underneath while the new theme is revealed on
+   top by a circular clip from the toggle (ThemeToggle.astro drives the clip-path). */
+html.theme-transitioning::view-transition-old(root),
+html.theme-transitioning::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.theme-transitioning::view-transition-old(root) {
+  z-index: 1;
+}
+
+html.theme-transitioning::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* The wipe is the only colour motion: element colour transitions would repaint the whole
+   page and crossfade inside the live new frame. The toggle's icon morph keeps running. */
+html.theme-transitioning *:not(.theme-toggle, .theme-toggle *) {
+  transition: none !important;
+}
+
 /* Case-study continuity: the next-project title becomes the next page's heading. */
 ::view-transition-group(project-title) {
   animation-duration: 360ms;
