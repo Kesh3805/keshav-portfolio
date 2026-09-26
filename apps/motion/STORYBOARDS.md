@@ -112,7 +112,7 @@ Timelines are authored on a 30 fps, 16 s story clock (`storyScale` in `packages/
 
 ## SystemsHeroFilm
 
-**Format.** 1920×1080, 60 fps, 34 s (2040 frames), dark and light. Authored at 1280×720 logical units on the shared story clock and rendered at 1.5×. Offered on the homepage as a user-initiated, silent film in a dialog; the homepage never loads it until asked.
+**Format.** 1920×1080, 60 fps, 34 s (2040 frames), dark and light. Authored at 1280×720 logical units on the shared story clock and rendered at 1.5×. Embedded inline on the homepage (`SystemsReel.astro`) with a chapter rail — one chapter per act, from `content/site/motion.json`, each a jump point with its takeaway and case study. Silent, never autoplays, loads nothing until played; the poster is a frame from Act III (18 s), since the last frame repeats the identity hero.
 
 **Concept.** Four systems on one plane. The camera moves from one to the next, then pulls back until they share the frame and resolve into the homepage topology.
 

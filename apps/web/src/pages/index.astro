@@ -7,7 +7,7 @@ import RoleTimeline from '../components/RoleTimeline.astro';
 import SectionHeader from '../components/SectionHeader.astro';
 import MetricValue from '../components/MetricValue.astro';
 import SystemDiagram from '../components/SystemDiagram.astro';
-import SystemsFilm from '../components/SystemsFilm.astro';
+import SystemsReel from '../components/SystemsReel.astro';
 import WritingList from '../components/WritingList.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getArticles, getExperience, getProjects, getProjectsBySlug } from '../lib/content';
@@ -98,8 +98,11 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
       </div>
       <div class="hero-visual">
         <SystemDiagram />
-        <SystemsFilm />
       </div>
+    </div>
+
+    <div class="container-page">
+      <SystemsReel />
     </div>
 
     {
@@ -240,7 +243,9 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
         {
           site.links.email && (
             <li>
-              <a class="btn" href={`mailto:${site.links.email}`}>Email</a>
+              <a class="btn" href={`mailto:${site.links.email}`} title={`Send email to ${site.links.email} (copies on click)`}>
+                Email · {site.links.email}
+              </a>
             </li>
           )
         }

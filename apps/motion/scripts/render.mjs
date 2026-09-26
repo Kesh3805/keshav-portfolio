@@ -40,6 +40,9 @@ const OUTPUTS = {
   PersonalHeroPortrait: 'personal-hero-portrait',
 };
 const COMPOSITIONS = Object.keys(OUTPUTS);
+// Poster frame (output frames) where the last frame is not the right one: the systems film
+// ends on the identity card the homepage hero already shows, so its poster is a system.
+const POSTER_AT = { SystemsHeroFilm: 18 * 60 };
 const fileName = (id) => OUTPUTS[id];
 
 const ids = only.length ? only : COMPOSITIONS;
@@ -57,13 +60,13 @@ for (const id of ids) {
     const name = theme === 'dark' ? fileName(id) : `${fileName(id)}-light`;
     const started = Date.now();
 
-    // Poster: the settled final state, which carries the takeaway.
+    // Poster: the settled final state, which carries the takeaway (unless POSTER_AT says otherwise).
     await renderStill({
       serveUrl,
       composition,
       inputProps,
       timeoutInMilliseconds: 120_000,
-      frame: composition.durationInFrames - 1,
+      frame: POSTER_AT[id] ?? composition.durationInFrames - 1,
       output: resolve(out, `${name}.jpg`),
       imageFormat: 'jpeg',
       jpegQuality: 82,

@@ -1,0 +1,438 @@
+---
+// The systems film, inline and chaptered. No modal: the player sits in the page beside a
+// chapter rail, and each chapter is a jump point with its own takeaway and case study, so
+// someone scanning can go straight to the lock, the pipeline or the reconciliation without
+// watching 34 seconds. The rail is also the text alternative: it reads on its own.
+//
+// Silent, never autoplays, never loops. Media loads on first play (preload="none"), the
+// poster only when the player comes near the viewport. Playback pauses out of view.
+import { Play, RotateCcw } from '@lucide/astro';
+import { getEntry } from 'astro:content';
+import { getProjects } from '../lib/content';
+import { motionMedia } from '../lib/motion';
+import { href } from '../lib/paths';
+
+const NAME = 'systems-hero-film';
+const entry = await getEntry('motion', NAME);
+const media = motionMedia(NAME).filter((v) => v.webm || v.mp4);
+const chapters = entry?.data.chapters ?? [];
+const show = entry && media.length > 0 && chapters.length > 0;
+const multi = media.length > 1;
+const titles = new Map((await getProjects()).map((p) => [p.data.slug, p.data.title]));
+for (const c of chapters)
+  for (const slug of c.projects)
+    if (!titles.has(slug)) throw new Error(`Film chapter "${c.title}" links unknown project "${slug}"`);
+
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+const total = chapters.at(-1)?.to ?? 0;
+---
+
+{
+  show && (
+    <div class="reel" data-reel id="systems-film">
+      <header class="reel-head">
+        <p class="meta">
+          Systems film · {clock(total)} · {chapters.length} chapters · no sound
+        </p>
+        <h3 id="reel-title">{entry.data.title}</h3>
+        <p class="takeaway">{entry.data.takeaway}</p>
+      </header>
+
+      <div class="reel-body">
+        <div class="player" data-reel-player>
+          {media.map((v) => (
+            <video
+              class="video"
+              data-variant={multi ? v.theme : undefined}
+              data-poster={v.poster}
+              preload="none"
+              muted
+              playsinline
+              controls
+              width="1920"
+              height="1080"
+              aria-labelledby="reel-title"
+              aria-describedby="reel-chapters"
+            >
+              {v.webm && <source src={v.webm} type="video/webm" />}
+              {v.mp4 && <source src={v.mp4} type="video/mp4" />}
+            </video>
+          ))}
+          <button type="button" class="cover" data-reel-play aria-label="Play the systems film from the start">
+            <span class="cover-icon" data-icon="play">
+              <Play size={18} aria-hidden="true" />
+            </span>
+            <span class="cover-icon" data-icon="replay">
+              <RotateCcw size={18} aria-hidden="true" />
+            </span>
+            <span class="cover-label" data-label-play>Play · {clock(total)}</span>
+            <span class="cover-label" data-label-replay>Watch again</span>
+          </button>
+        </div>
+
+        <ol class="chapters" id="reel-chapters" aria-label="Chapters">
+          {chapters.map((c, i) => (
+            <li class="chapter" data-chapter data-from={c.from} data-to={c.to}>
+              <button type="button" class="jump" data-jump aria-label={`Play chapter ${i + 1}, ${c.title}, from ${clock(c.from)}`}>
+                <span class="index meta">{String(i + 1).padStart(2, '0')}</span>
+                <span class="title">{c.title}</span>
+                <span class="time meta">
+                  {clock(c.from)}–{clock(c.to)}
+                </span>
+                <span class="bar" aria-hidden="true"><span class="fill" /></span>
+              </button>
+              <p class="summary">{c.summary}</p>
+              {c.projects.length > 0 && (
+                <p class="links meta">
+                  {c.projects.map((slug) => (
+                    <a href={href(`/projects/${slug}`)}>{titles.get(slug)} →</a>
+                  ))}
+                </p>
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <details class="steps">
+        <summary class="meta">Read the full sequence</summary>
+        <ol>
+          {entry.data.steps.map((step) => (
+            <li>{step}</li>
+          ))}
+        </ol>
+      </details>
+    </div>
+  )
+}
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-reel]');
+  if (root) {
+    const player = root.querySelector<HTMLElement>('[data-reel-player]')!;
+    const cover = root.querySelector<HTMLButtonElement>('[data-reel-play]')!;
+    const items = [...root.querySelectorAll<HTMLElement>('[data-chapter]')];
+    const chapters = items.map((el) => ({ el, from: Number(el.dataset.from), to: Number(el.dataset.to) }));
+    const videos = [...player.querySelectorAll<HTMLVideoElement>('video')];
+    // The inactive theme's video is hidden by the global theme rule; act on the visible one.
+    const visible = () => videos.find((v) => v.offsetParent !== null) ?? videos[0]!;
+    let raf = 0;
+
+    const paint = () => {
+      const t = visible().currentTime;
+      let active = -1;
+      chapters.forEach((c, i) => {
+        const p = Math.min(1, Math.max(0, (t - c.from) / (c.to - c.from)));
+        c.el.style.setProperty('--p', p.toFixed(4));
+        if (t >= c.from && t < c.to) active = i;
+      });
+      chapters.forEach((c, i) => {
+        if (i === active) c.el.setAttribute('aria-current', 'step');
+        else c.el.removeAttribute('aria-current');
+      });
+    };
+    const loop = () => {
+      paint();
+      raf = visible().paused ? 0 : requestAnimationFrame(loop);
+    };
+
+    const attachPosters = () => {
+      for (const v of videos) if (!v.poster && v.dataset.poster) v.poster = v.dataset.poster;
+    };
+
+    const play = (from?: number) => {
+      const v = visible();
+      attachPosters();
+      const start = () => {
+        if (from !== undefined) v.currentTime = from + 0.02;
+        void v.play().catch(() => {});
+      };
+      if (v.readyState >= 1) start();
+      else {
+        v.addEventListener('loadedmetadata', start, { once: true });
+        v.load();
+      }
+    };
+
+    for (const v of videos) {
+      v.addEventListener('play', () => {
+        root.classList.add('is-playing', 'has-started');
+        root.classList.remove('is-ended');
+        if (!raf) raf = requestAnimationFrame(loop);
+      });
+      v.addEventListener('pause', () => root.classList.remove('is-playing'));
+      v.addEventListener('ended', () => root.classList.add('is-ended'));
+      v.addEventListener('seeked', paint);
+    }
+
+    cover.addEventListener('click', () => play(0));
+    chapters.forEach((c) =>
+      c.el.querySelector('[data-jump]')!.addEventListener('click', () => play(c.from)),
+    );
+
+    // Posters when the player comes near the viewport; pause when it scrolls out of view.
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) attachPosters();
+        else videos.forEach((v) => v.pause());
+      },
+      { rootMargin: '200px 0px', threshold: 0 },
+    );
+    io.observe(player);
+
+    // Theme switch mid-film: carry the position over to the other variant.
+    document.addEventListener('themechange', () => {
+      const from = videos.find((v) => v.currentTime > 0 && v !== visible());
+      if (!from) return;
+      const wasPlaying = !from.paused;
+      from.pause();
+      requestAnimationFrame(() => {
+        const to = visible();
+        if (to === from) return;
+        const sync = () => {
+          to.currentTime = from.currentTime;
+          if (wasPlaying) void to.play().catch(() => {});
+        };
+        if (to.readyState >= 1) sync();
+        else {
+          to.addEventListener('loadedmetadata', sync, { once: true });
+          to.load();
+        }
+      });
+    });
+
+    document.addEventListener('astro:before-swap', () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+      videos.forEach((v) => v.pause());
+    }, { once: true });
+  }
+</script>
+
+<style>
+  .reel {
+    margin-top: clamp(2.5rem, 6vw, 4rem);
+  }
+
+  .reel-head {
+    max-width: 48rem;
+    margin-bottom: 1.25rem;
+  }
+
+  h3 {
+    margin-top: 0.35rem;
+    font-size: clamp(1.3rem, 2.4vw, 1.6rem);
+    letter-spacing: -0.02em;
+  }
+
+  .takeaway {
+    margin-top: 0.5rem;
+    color: var(--text-muted);
+  }
+
+  .reel-body {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 64rem) {
+    .reel-body {
+      grid-template-columns: minmax(0, 1.7fr) minmax(18rem, 1fr);
+      align-items: start;
+    }
+  }
+
+  .player {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--bg);
+    box-shadow: var(--bevel), var(--shadow-2);
+  }
+
+  .video {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  /* Cover: one quiet control over the poster until the film is started. */
+  .cover {
+    position: absolute;
+    left: 1rem;
+    bottom: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.5rem 0.9rem 0.5rem 0.6rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(6px);
+    color: var(--text);
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition:
+      border-color var(--dur-micro) var(--ease-ui),
+      opacity var(--dur-ui) var(--ease-ui);
+  }
+
+  .cover:hover,
+  .cover:focus-visible {
+    border-color: var(--accent);
+  }
+
+  .cover-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-ink, var(--bg));
+  }
+
+  .cover [data-icon='replay'],
+  .cover [data-label-replay],
+  .is-ended .cover [data-icon='play'],
+  .is-ended .cover [data-label-play] {
+    display: none;
+  }
+
+  .is-ended .cover [data-icon='replay'] {
+    display: inline-grid;
+  }
+
+  .is-ended .cover [data-label-replay] {
+    display: inline;
+  }
+
+  /* Before the first play and after the end only; mid-film the native controls resume. */
+  .has-started:not(.is-ended) .cover {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Chapter rail */
+  .chapters {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .chapter {
+    padding: 0.7rem 0.85rem 0.8rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    transition:
+      background-color var(--dur-micro) var(--ease-ui),
+      border-color var(--dur-micro) var(--ease-ui);
+  }
+
+  .chapter[aria-current='step'] {
+    border-color: var(--line);
+    background: var(--surface);
+  }
+
+  .jump {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    gap: 0.25rem 0.7rem;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .jump:hover .title,
+  .jump:focus-visible .title {
+    color: var(--accent);
+  }
+
+  .index {
+    color: var(--text-subtle);
+  }
+
+  [aria-current='step'] .index {
+    color: var(--data);
+  }
+
+  .title {
+    font-weight: 600;
+    transition: color var(--dur-micro) var(--ease-ui);
+  }
+
+  .time {
+    color: var(--text-subtle);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* Progress through each chapter; data colour, linear, driven by the video's clock. */
+  .bar {
+    grid-column: 1 / -1;
+    height: 2px;
+    margin-top: 0.45rem;
+    border-radius: 2px;
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  .fill {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--data);
+    transform-origin: left;
+    transform: scaleX(var(--p, 0));
+  }
+
+  .summary {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.9rem;
+    margin-top: 0.4rem;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .links a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  .links a:hover {
+    color: var(--accent);
+  }
+
+  .steps {
+    margin-top: 1rem;
+  }
+
+  .steps summary {
+    cursor: pointer;
+  }
+
+  .steps ol {
+    display: grid;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+    padding-left: 1.2rem;
+    list-style: decimal;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    max-width: 52rem;
+  }
+</style>

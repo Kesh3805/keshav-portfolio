@@ -87,6 +87,43 @@
       "BARA classifies each message first; 41 deterministic gates decide whether to retrieve. An acknowledgement retrieves nothing; a message that refers back opens only the research and episodic tiers.",
       "Antigravity reviews a pull request in a temporary worktree; a finding without a diff line is dropped, the worktree is removed, and the main branch is never touched.",
       "The systems resolve into the architecture on the homepage: Redis, BullMQ and workers, the AI pipeline, PostgreSQL, the NestJS API, SSE and pgvector memory. That topology contracts into the K mark from the site header, followed by the name, the role and the site headline."
+    ],
+    "chapters": [
+      {
+        "title": "Concurrency lock",
+        "from": 0,
+        "to": 7,
+        "summary": "Two scans reach one unit. A Redis lock makes the decrement atomic: one redeems, the other re-reads 0 and is rejected.",
+        "projects": ["questqr"]
+      },
+      {
+        "title": "Document AI pipeline",
+        "from": 7,
+        "to": 14,
+        "summary": "Invoice guard → GCS → LlamaIndex Cloud → verified webhook → BullMQ → the PostgreSQL ledger.",
+        "projects": ["fintax"]
+      },
+      {
+        "title": "M9 reconciliation",
+        "from": 14,
+        "to": 22,
+        "summary": "Books vs IMS vs GSTR-2B in five states over SSE; the status read goes from 3,000ms+ to under 15ms.",
+        "projects": ["fintax"]
+      },
+      {
+        "title": "Gated memory, isolated review",
+        "from": 22,
+        "to": 29,
+        "summary": "41 gates decide whether BARA retrieves at all; Antigravity reviews in a worktree it throws away.",
+        "projects": ["bara", "antigravity-pr-reviewer"]
+      },
+      {
+        "title": "One architecture",
+        "from": 29,
+        "to": 34,
+        "summary": "The four systems resolve into the topology on this page, then into the K.",
+        "projects": []
+      }
     ]
   }
 ]

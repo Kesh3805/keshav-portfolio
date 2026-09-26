@@ -81,6 +81,10 @@ const notes = defineCollection({
   schema: z.object({
     title: z.string(),
     updatedAt: z.coerce.date().optional(),
+    /** About page: the opening statement, shown large above the body. */
+    lede: z.string().optional(),
+    /** About page: symptoms that became write-ups, each linked to its article. */
+    investigations: z.array(z.object({ symptom: z.string(), article: slug })).optional(),
   }),
 });
 
@@ -101,6 +105,18 @@ const motionFigures = defineCollection({
     title: z.string(),
     takeaway: z.string(),
     steps: z.array(z.string()).min(2),
+    /** Jump points for long films; seconds on the rendered timeline. */
+    chapters: z
+      .array(
+        z.object({
+          title: z.string(),
+          from: z.number().min(0),
+          to: z.number().positive(),
+          summary: z.string().max(140),
+          projects: z.array(slug).default([]),
+        }),
+      )
+      .optional(),
   }),
 });
 

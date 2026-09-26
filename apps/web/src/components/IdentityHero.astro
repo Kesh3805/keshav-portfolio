@@ -113,9 +113,14 @@ const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.
   }
 
   {playable && (
-    <button type="button" class="skip meta" data-identity-skip>
-      Skip intro
-    </button>
+    <>
+      <button type="button" class="skip meta" data-identity-skip>
+        Skip intro
+      </button>
+      <button type="button" class="replay meta" data-identity-replay>
+        <span aria-hidden="true">↺</span> Replay intro
+      </button>
+    </>
   )}
 </section>
 
@@ -143,10 +148,18 @@ const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.
   const hero = document.querySelector<HTMLElement>('[data-identity]');
   if (hero) {
     const landscape = matchMedia('(min-width: 56.25rem)');
-    let done = !hero.classList.contains('is-intro');
+    let done = true;
     let video: HTMLVideoElement | null = null;
+    let timeout = 0;
 
-    const finish = () => {
+    const cleanup = () => {
+      clearTimeout(timeout);
+      document.removeEventListener('themechange', finish);
+      document.removeEventListener('visibilitychange', onVisibility);
+      landscape.removeEventListener('change', finish);
+    };
+
+    function finish() {
       if (done) return;
       done = true;
       try {
@@ -154,67 +167,76 @@ const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.
       } catch {
         /* storage blocked: the sequence may play again next visit */
       }
-      hero.classList.remove('is-intro');
-      hero.classList.add('is-arrived');
+      hero!.classList.remove('is-intro');
+      hero!.classList.add('is-arrived');
       video?.pause();
       cleanup();
-    };
+    }
 
     // Only a blocked autoplay ends the intro here; load and decode failures go through the
     // error handler (which may retry) or the start timeout.
     const start = () =>
       void video?.play().catch((err: DOMException) => err.name === 'NotAllowedError' && finish());
 
-    const onVisibility = () => {
-      if (!video) return;
+    function onVisibility() {
+      if (!video || done) return;
       if (document.hidden) video.pause();
       else start();
-    };
-    const cleanup = () => {
-      document.removeEventListener('themechange', finish);
-      document.removeEventListener('visibilitychange', onVisibility);
-      landscape.removeEventListener('change', finish);
-    };
-
-    if (!done) {
-      const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
-      const stage = hero.querySelector<HTMLElement>(`[data-stage="${landscape.matches ? 'landscape' : 'portrait'}"]`);
-      video = stage?.querySelector('video') ?? null;
-      const webm = video?.dataset[`webm${theme === 'light' ? 'Light' : 'Dark'}`];
-      const mp4 = video?.dataset[`mp4${theme === 'light' ? 'Light' : 'Dark'}`];
-      const src = webm && video?.canPlayType('video/webm; codecs="vp9"') ? webm : mp4;
-
-      if (!video || !src) {
-        finish();
-      } else {
-        video.src = src;
-        video.addEventListener('ended', finish, { once: true });
-        // A WebM that fails to decode gets one retry as MP4 before the live frame takes over.
-        video.addEventListener('error', function retry() {
-          if (video && mp4 && video.getAttribute('src') !== mp4) {
-            video.src = mp4;
-            start();
-          } else {
-            video?.removeEventListener('error', retry);
-            finish();
-          }
-        });
-        // If the first frame has not played in time, the live frame takes over.
-        const timeout = setTimeout(finish, 2500);
-        video.addEventListener('playing', () => clearTimeout(timeout), { once: true });
-        start();
-        // Anything that would make the video disagree with the page ends it early.
-        document.addEventListener('themechange', finish);
-        document.addEventListener('visibilitychange', onVisibility);
-        landscape.addEventListener('change', finish);
-        hero.querySelector('[data-identity-skip]')?.addEventListener('click', finish);
-        hero.addEventListener('keydown', (e) => e.key === 'Escape' && finish());
-      }
     }
-    document.addEventListener('astro:before-swap', () => {
-      video?.pause();
-      cleanup();
-    }, { once: true });
+
+    /** Plays the sequence from the first frame: on a first visit, and on "Replay intro". */
+    const run = () => {
+      const theme = document.documentElement.dataset.theme === 'light' ? 'Light' : 'Dark';
+      const stage = hero.querySelector<HTMLElement>(
+        `[data-stage="${landscape.matches ? 'landscape' : 'portrait'}"]`,
+      );
+      video = stage?.querySelector('video') ?? null;
+      const webm = video?.dataset[`webm${theme}`];
+      const mp4 = video?.dataset[`mp4${theme}`];
+      const src = webm && video?.canPlayType('video/webm; codecs="vp9"') ? webm : mp4;
+      done = false;
+      hero.classList.remove('is-arrived');
+      hero.classList.add('is-intro');
+      if (!video || !src) return finish();
+
+      const v = video;
+      v.onended = finish;
+      // A WebM that fails to decode gets one retry as MP4 before the live frame takes over.
+      v.onerror = () => {
+        if (mp4 && v.getAttribute('src') !== mp4) {
+          v.src = mp4;
+          start();
+        } else finish();
+      };
+      // If the first frame has not played in time, the live frame takes over.
+      timeout = window.setTimeout(finish, 2500);
+      v.addEventListener('playing', () => clearTimeout(timeout), { once: true });
+      if (v.getAttribute('src') === src) v.currentTime = 0;
+      else v.src = src;
+      start();
+      // Anything that would make the video disagree with the page ends it early.
+      document.addEventListener('themechange', finish);
+      document.addEventListener('visibilitychange', onVisibility);
+      landscape.addEventListener('change', finish);
+    };
+
+    hero.querySelector('[data-identity-skip]')?.addEventListener('click', finish);
+    hero.addEventListener('keydown', (e) => e.key === 'Escape' && finish());
+    hero.querySelector('[data-identity-replay]')?.addEventListener('click', () => {
+      run();
+      hero.querySelector<HTMLElement>('[data-identity-skip]')?.focus();
+    });
+    // The inline script has already decided whether this visit plays the sequence.
+    if (hero.classList.contains('is-intro')) run();
+
+    document.addEventListener(
+      'astro:before-swap',
+      () => {
+        video?.pause();
+        cleanup();
+      },
+      { once: true },
+    );
   }
 </script>
 
@@ -310,6 +332,33 @@ const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.
 
   .skip {
     display: none;
+  }
+
+  /* Replay: quiet, bottom-right of the stage, hidden while the sequence plays. */
+  .replay {
+    position: absolute;
+    right: max(1rem, calc((100% - min(100%, var(--room) * 16 / 9)) / 2 + 1rem));
+    bottom: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border: 0;
+    background: none;
+    color: var(--text-subtle);
+    cursor: pointer;
+  }
+
+  .replay:hover,
+  .replay:focus-visible {
+    color: var(--text);
+  }
+
+  .is-intro .replay {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .replay {
+      display: none;
+    }
   }
 
   /* Intro: only the video is on stage; the live frame and the buttons wait for it. */

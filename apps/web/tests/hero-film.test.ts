@@ -88,6 +88,21 @@ describe('systems film', () => {
     }
   });
 
+  it('offers one chapter per act, on the act boundaries', () => {
+    const chapters = (
+      film as unknown as { chapters: { from: number; to: number; projects: string[] }[] }
+    ).chapters;
+    const acts = Object.values(ACTS);
+    expect(chapters).toHaveLength(acts.length);
+    const seconds = (storyFrames: number) => outputFrames(storyFrames) / fps;
+    chapters.forEach((c, i) => {
+      expect(c.from).toBeCloseTo(seconds(acts[i]!.start), 1);
+      expect(c.to).toBeCloseTo(seconds(acts[i]!.end), 1);
+    });
+    const slugs = readdirSync(resolve(content, 'projects')).map((f) => f.replace(/\.mdx?$/, ''));
+    for (const c of chapters) for (const s of c.projects) expect(slugs).toContain(s);
+  });
+
   it('has a text alternative for every act', () => {
     expect(film?.steps.length).toBeGreaterThanOrEqual(5);
     expect(film?.takeaway.length).toBeGreaterThan(20);
