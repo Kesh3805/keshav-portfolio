@@ -1,0 +1,286 @@
+---
+// "Watch the systems film": a user-initiated, silent, 34-second film in a modal.
+// The homepage never loads the video until asked (preload="none"); the poster is
+// its final frame. With reduced motion, the dialog shows that frame and the full
+// storyboard instead, with an explicit option to play it anyway.
+import { Play, X } from '@lucide/astro';
+import { getEntry } from 'astro:content';
+import { motionMedia } from '../lib/motion';
+
+const NAME = 'systems-hero-film';
+const entry = await getEntry('motion', NAME);
+const media = motionMedia(NAME).filter((v) => v.webm || v.mp4);
+const show = entry && media.length > 0;
+const multi = media.length > 1;
+---
+
+{
+  show && (
+    <div class="film" data-film>
+      <button type="button" class="open" data-film-open aria-haspopup="dialog">
+        <Play size={13} aria-hidden="true" />
+        <span>Watch the systems film</span>
+        <span class="meta dur">0:34 · no sound</span>
+      </button>
+
+      <dialog class="sheet" data-film-dialog aria-labelledby="film-title" aria-describedby="film-takeaway">
+        <header>
+          <div>
+            <p class="meta">Systems film</p>
+            <h2 id="film-title">{entry.data.title}</h2>
+          </div>
+          <button type="button" class="close" data-film-close aria-label="Close the systems film">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </header>
+
+        <div class="screen">
+          {media.map((v) => (
+            <video
+              class="video"
+              data-variant={multi ? v.theme : undefined}
+              data-poster={v.poster}
+              preload="none"
+              controls
+              muted
+              playsinline
+              width="1920"
+              height="1080"
+              aria-describedby="film-steps"
+            >
+              {v.webm && <source src={v.webm} type="video/webm" />}
+              {v.mp4 && <source src={v.mp4} type="video/mp4" />}
+            </video>
+          ))}
+          {media.map((v) =>
+            v.poster ? (
+              <img class="still" data-variant={multi ? v.theme : undefined} src={v.poster} alt="" width="1920" height="1080" loading="lazy" decoding="async" />
+            ) : null,
+          )}
+        </div>
+
+        <p class="takeaway" id="film-takeaway">{entry.data.takeaway}</p>
+        <button type="button" class="anyway meta" data-film-anyway>
+          Play the film anyway
+        </button>
+        <details class="steps" data-film-steps>
+          <summary class="meta">Read the sequence</summary>
+          <ol id="film-steps">
+            {entry.data.steps.map((step) => (
+              <li>{step}</li>
+            ))}
+          </ol>
+        </details>
+      </dialog>
+    </div>
+  )
+}
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-film]');
+  if (root) {
+    const dialog = root.querySelector<HTMLDialogElement>('[data-film-dialog]')!;
+    const steps = root.querySelector<HTMLDetailsElement>('[data-film-steps]')!;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    const videos = () => [...dialog.querySelectorAll<HTMLVideoElement>('video')];
+    const visible = () => videos().find((v) => v.offsetParent !== null);
+
+    const open = () => {
+      // Posters are attached on open: a poster attribute is fetched eagerly, even in a closed dialog.
+      for (const v of videos()) if (!v.poster && v.dataset.poster) v.poster = v.dataset.poster;
+      dialog.classList.toggle('is-static', reduced.matches);
+      steps.open = reduced.matches;
+      dialog.showModal();
+      if (!reduced.matches) void visible()?.play().catch(() => {});
+    };
+    const close = () => dialog.close();
+
+    root.querySelector('[data-film-open]')!.addEventListener('click', open);
+    root.querySelector('[data-film-close]')!.addEventListener('click', close);
+    root.querySelector('[data-film-anyway]')!.addEventListener('click', () => {
+      dialog.classList.remove('is-static');
+      void visible()?.play().catch(() => {});
+    });
+    // Closing (button, Escape or backdrop) always stops playback.
+    dialog.addEventListener('close', () => videos().forEach((v) => v.pause()));
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) close();
+    });
+    // Space toggles playback when focus is not already on the video's own controls.
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key !== ' ' || event.target instanceof HTMLVideoElement || event.target instanceof HTMLButtonElement) return;
+      const v = visible();
+      if (!v) return;
+      event.preventDefault();
+      if (v.paused) void v.play();
+      else v.pause();
+    });
+  }
+</script>
+
+<style>
+  .film {
+    margin-top: 0.9rem;
+  }
+
+  .open {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem 0.4rem 0.65rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface);
+    font-size: 0.85rem;
+    color: var(--text);
+    cursor: pointer;
+    transition:
+      border-color var(--dur-micro) var(--ease-ui),
+      background-color var(--dur-micro) var(--ease-ui);
+  }
+
+  .open :global(svg) {
+    color: var(--accent);
+  }
+
+  .open:hover {
+    border-color: var(--accent);
+    background: var(--surface-elevated);
+  }
+
+  .dur {
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .sheet {
+    width: min(72rem, calc(100% - 2rem));
+    max-height: calc(100dvh - 2rem);
+    margin: auto;
+    padding: 1rem 1rem 1.25rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--bevel), var(--shadow-3);
+    overflow-y: auto;
+  }
+
+  .sheet[open] {
+    animation: sheet-in var(--dur-ui) var(--ease-out);
+  }
+
+  .sheet::backdrop {
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    backdrop-filter: blur(4px);
+  }
+
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+      translate: 0 8px;
+    }
+  }
+
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  h2 {
+    margin-top: 0.25rem;
+    font-size: 1.15rem;
+  }
+
+  .close {
+    display: inline-grid;
+    place-items: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-elevated);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .close:hover {
+    color: var(--text);
+    border-color: var(--line-strong);
+  }
+
+  .screen {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .video,
+  .still {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  /* Static presentation (reduced motion): the final frame instead of the player. */
+  .still {
+    display: none;
+  }
+
+  .is-static .video {
+    display: none;
+  }
+
+  .is-static .still {
+    display: block;
+  }
+
+  /* The theme rule in global.css hides the inactive variant; keep that working for stills too. */
+  :global(:root[data-theme='light']) .still[data-variant='dark'],
+  :global(:root[data-theme='dark']) .still[data-variant='light'] {
+    display: none !important;
+  }
+
+  .takeaway {
+    margin-top: 0.9rem;
+    color: var(--text-muted);
+    max-width: 52rem;
+  }
+
+  .anyway {
+    display: none;
+    margin-top: 0.6rem;
+    cursor: pointer;
+  }
+
+  .is-static .anyway {
+    display: inline-block;
+  }
+
+  .anyway:hover {
+    color: var(--accent);
+  }
+
+  .steps {
+    margin-top: 0.75rem;
+  }
+
+  .steps summary {
+    cursor: pointer;
+  }
+
+  .steps ol {
+    display: grid;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+    padding-left: 1.2rem;
+    list-style: decimal;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+  }
+</style>

@@ -6,6 +6,7 @@ import RoleTimeline from '../components/RoleTimeline.astro';
 import SectionHeader from '../components/SectionHeader.astro';
 import MetricValue from '../components/MetricValue.astro';
 import SystemDiagram from '../components/SystemDiagram.astro';
+import SystemsFilm from '../components/SystemsFilm.astro';
 import WritingList from '../components/WritingList.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getArticles, getExperience, getProjects, getProjectsBySlug } from '../lib/content';
@@ -105,6 +106,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
       </div>
       <div class="hero-visual">
         <SystemDiagram />
+        <SystemsFilm />
       </div>
     </div>
 
