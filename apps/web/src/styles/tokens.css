@@ -1,83 +1,103 @@
 /*
- * Surface hierarchy, lowest to highest:
- *   --bg              page canvas
- *   --surface         cards, panels
- *   --surface-raised  chips, inputs, HUD tiles, code
- *   --surface-glass   floating chrome (header island), used with backdrop blur
- * Each raised layer gets a 1px top bevel highlight (--bevel) and a shadow step.
- * Dark is the default; accent colours mirror packages/motion-tokens.
+ * Colour hierarchy, in order of how much of the page each role owns:
+ *
+ *   --bg               page canvas
+ *   --surface          cards, panels
+ *   --surface-elevated chips, inputs, metric tiles, code
+ *   --text             primary copy
+ *   --text-muted       secondary copy
+ *   --text-subtle      metadata, captions
+ *   --line             structural rules
+ *   --line-strong      borders that must read as edges
+ *   --data             system data: topology edges, signals, diagrams, evidence
+ *   --accent           brand / interaction: links, buttons, selection, focus
+ *   --success --warning --error   semantic state only
+ *
+ * --data and --accent are deliberately different roles. Diagrams and system
+ * motion speak in --data; --accent marks what the visitor can act on or has
+ * selected, and stays rare. Neither shares a hue with the semantic colours.
+ *
+ * Dark reads as a systems console; light as a technical publication on paper.
+ * Remotion renders mirror these values in packages/motion-tokens/src/colors.ts.
  */
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0a0b0c;
-  --surface: #111315;
-  --surface-raised: #171a1d;
-  --surface-glass: rgb(17 19 21 / 0.72);
-  --line: #23272b;
-  --line-strong: #353c42;
-  --text: #ecebe6;
-  --muted: #a4aaad;
-  --faint: #80878c;
-  --accent: #f0a64a;
-  --accent-ink: #1a1206;
-  --data: #6cc4cb;
-  --ok: #7fc486;
-  --error: #e5675e;
-  --grid: rgb(255 255 255 / 0.03);
+  --bg: #0b0d10;
+  --surface: #111418;
+  --surface-elevated: #171b20;
+  --surface-glass: rgb(17 20 24 / 0.72);
+  --line: #232830;
+  --line-strong: #343b45;
+  --text: #e6e9ee;
+  --text-muted: #a1a9b4;
+  --text-subtle: #7e8895;
+  --accent: #9095ff;
+  --accent-ink: #0c0d1f;
+  --data: #4cc2e4;
+  --success: #5cb88a;
+  --warning: #d6a24e;
+  --error: #e26a63;
+  --grid: rgb(255 255 255 / 0.028);
 
-  --bevel: inset 0 1px 0 rgb(255 255 255 / 0.055);
+  --bevel: inset 0 1px 0 rgb(255 255 255 / 0.05);
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
   --shadow-2: 0 10px 28px -14px rgb(0 0 0 / 0.85), 0 2px 6px -2px rgb(0 0 0 / 0.5);
   --shadow-3: 0 28px 64px -28px rgb(0 0 0 / 0.95), 0 6px 16px -8px rgb(0 0 0 / 0.6);
-  --glow-accent: 0 0 0 1px rgb(240 166 74 / 0.35), 0 8px 28px -10px rgb(240 166 74 / 0.45);
-  --spotlight: rgb(240 166 74 / 0.09);
+  --glow-accent: 0 0 0 1px rgb(144 149 255 / 0.32), 0 8px 28px -12px rgb(144 149 255 / 0.4);
+  --spotlight: rgb(144 149 255 / 0.07);
   --atmosphere:
-    radial-gradient(1100px 520px at 12% -8%, rgb(240 166 74 / 0.075), transparent 62%),
-    radial-gradient(900px 480px at 92% 2%, rgb(108 196 203 / 0.06), transparent 60%);
-  --shadow: var(--bevel), var(--shadow-2);
+    radial-gradient(1000px 480px at 10% -10%, rgb(76 194 228 / 0.045), transparent 62%),
+    radial-gradient(900px 460px at 92% 0%, rgb(144 149 255 / 0.04), transparent 60%);
 
   /* Isometric topology faces (hero): lit top, two shaded sides. */
-  --topo-top: #1d2125;
-  --topo-left: #15181b;
-  --topo-right: #0f1113;
+  --topo-top: #1b1f25;
+  --topo-left: #14171c;
+  --topo-right: #0f1115;
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f4f2ec;
+  --bg: #f4f2ed;
   --surface: #fbfaf6;
-  --surface-raised: #ffffff;
-  --surface-glass: rgb(251 250 246 / 0.76);
-  --line: #dedad0;
-  --line-strong: #c4bfb2;
-  --text: #1a1c1d;
-  --muted: #545b5f;
-  --faint: #5f676c;
-  --accent: #9a5200;
+  --surface-elevated: #ffffff;
+  --surface-glass: rgb(251 250 246 / 0.78);
+  --line: #dfdcd4;
+  --line-strong: #c7c3b9;
+  --text: #1b1e23;
+  --text-muted: #4e5660;
+  --text-subtle: #616a74;
+  --accent: #4a47c2;
   --accent-ink: #ffffff;
-  --data: #0f6c73;
-  --ok: #2e6f36;
-  --error: #b3342b;
+  --data: #0b6d8f;
+  --success: #2d7549;
+  --warning: #93610a;
+  --error: #b3372e;
   --grid: rgb(0 0 0 / 0.035);
 
   --bevel: inset 0 1px 0 rgb(255 255 255 / 0.9);
-  --shadow-1: 0 1px 2px rgb(60 45 20 / 0.08);
-  --shadow-2: 0 10px 26px -16px rgb(60 45 20 / 0.28), 0 2px 5px -2px rgb(60 45 20 / 0.1);
-  --shadow-3: 0 26px 56px -28px rgb(60 45 20 / 0.38), 0 6px 14px -8px rgb(60 45 20 / 0.14);
-  --glow-accent: 0 0 0 1px rgb(154 82 0 / 0.25), 0 8px 24px -12px rgb(154 82 0 / 0.35);
-  --spotlight: rgb(154 82 0 / 0.06);
+  --shadow-1: 0 1px 2px rgb(40 36 30 / 0.08);
+  --shadow-2: 0 10px 26px -16px rgb(40 36 30 / 0.26), 0 2px 5px -2px rgb(40 36 30 / 0.1);
+  --shadow-3: 0 26px 56px -28px rgb(40 36 30 / 0.34), 0 6px 14px -8px rgb(40 36 30 / 0.13);
+  --glow-accent: 0 0 0 1px rgb(74 71 194 / 0.22), 0 8px 24px -12px rgb(74 71 194 / 0.3);
+  --spotlight: rgb(74 71 194 / 0.05);
   --atmosphere:
-    radial-gradient(1100px 520px at 12% -8%, rgb(154 82 0 / 0.06), transparent 62%),
-    radial-gradient(900px 480px at 92% 2%, rgb(15 108 115 / 0.05), transparent 60%);
-  --shadow: var(--bevel), var(--shadow-2);
+    radial-gradient(1000px 480px at 10% -10%, rgb(11 109 143 / 0.04), transparent 62%),
+    radial-gradient(900px 460px at 92% 0%, rgb(74 71 194 / 0.035), transparent 60%);
 
   --topo-top: #ffffff;
-  --topo-left: #ece9e1;
-  --topo-right: #e0dcd2;
+  --topo-left: #ece9e2;
+  --topo-right: #e0ddd4;
 }
 
 :root {
+  /* Aliases kept so component styles written against the earlier names keep working. */
+  --surface-raised: var(--surface-elevated);
+  --muted: var(--text-muted);
+  --faint: var(--text-subtle);
+  --ok: var(--success);
+  --shadow: var(--bevel), var(--shadow-2);
+
   --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --measure: 44rem;
@@ -86,16 +106,20 @@
   --radius: 8px;
   --radius-sm: 4px;
   --radius-lg: 14px;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   /*
-   * Motion scale. micro: hover, focus, buttons. ui: cards, panels, reveals.
-   * system: topology and data flow. Cinematic sequences (2-6s) live in the
-   * Remotion figures. Data moves linearly; UI eases out; nothing bounces.
+   * Motion. Things move because their state changes, not because a page loaded.
+   *   micro   hover, focus, buttons, navigation state
+   *   ui      cards, overlays, search, section reveals
+   *   system  topology, diagrams, signals, explainers
+   * UI eases out; data moves linearly; nothing bounces. Cinematic sequences
+   * (2-6 s) belong to the Remotion figures.
    */
   --dur-micro: 150ms;
   --dur-ui: 280ms;
   --dur-system: 1200ms;
+  --ease-ui: cubic-bezier(0.2, 0, 0, 1);
   --ease-data: linear;
+  --ease: var(--ease-ui);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }

@@ -172,7 +172,7 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
 
         {
           related.length > 0 && (
-            <section class="related" aria-labelledby="related-writing">
+            <section class="related" aria-labelledby="related-writing" data-reveal>
               <h2 class="section-label" id="related-writing">
                 Related writing
               </h2>
@@ -183,7 +183,7 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
 
         {
           next && next.id !== project.id && (
-            <nav class="next" aria-label="Next project">
+            <nav class="next" aria-label="Next project" data-reveal>
               <span class="meta">
                 Next · {categoryLabel}
                 {shared.length > 0 && <span class="shared"> · shares {shared.join(', ')}</span>}
@@ -317,13 +317,12 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
   }
 
   .result.lead {
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-    box-shadow: var(--bevel), var(--glow-accent);
+    border-color: color-mix(in srgb, var(--data) 40%, var(--line));
+    box-shadow: var(--bevel), var(--shadow-2);
   }
 
   .result.lead::before {
-    background: var(--accent);
-    box-shadow: 0 0 10px var(--accent);
+    background: var(--data);
   }
 
   .result-label {

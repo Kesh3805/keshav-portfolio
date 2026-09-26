@@ -350,8 +350,8 @@
 }
 
 .astro-code .line.highlighted {
-  background: color-mix(in srgb, var(--accent) 7%, transparent);
-  box-shadow: inset 2px 0 0 var(--accent);
+  background: color-mix(in srgb, var(--data) 8%, transparent);
+  box-shadow: inset 2px 0 0 var(--data);
 }
 
 .astro-code,
@@ -412,14 +412,14 @@ pre.mermaid::after {
   inset: 8px;
   pointer-events: none;
   background:
-    linear-gradient(var(--accent), var(--accent)) top left / 10px 1px,
-    linear-gradient(var(--accent), var(--accent)) top left / 1px 10px,
-    linear-gradient(var(--accent), var(--accent)) top right / 10px 1px,
-    linear-gradient(var(--accent), var(--accent)) top right / 1px 10px,
-    linear-gradient(var(--accent), var(--accent)) bottom left / 10px 1px,
-    linear-gradient(var(--accent), var(--accent)) bottom left / 1px 10px,
-    linear-gradient(var(--accent), var(--accent)) bottom right / 10px 1px,
-    linear-gradient(var(--accent), var(--accent)) bottom right / 1px 10px;
+    linear-gradient(var(--data), var(--data)) top left / 10px 1px,
+    linear-gradient(var(--data), var(--data)) top left / 1px 10px,
+    linear-gradient(var(--data), var(--data)) top right / 10px 1px,
+    linear-gradient(var(--data), var(--data)) top right / 1px 10px,
+    linear-gradient(var(--data), var(--data)) bottom left / 10px 1px,
+    linear-gradient(var(--data), var(--data)) bottom left / 1px 10px,
+    linear-gradient(var(--data), var(--data)) bottom right / 10px 1px,
+    linear-gradient(var(--data), var(--data)) bottom right / 1px 10px;
   background-repeat: no-repeat;
   opacity: 0.55;
 }
@@ -454,11 +454,9 @@ pre.mermaid svg {
   position: relative;
   padding: 1rem 1.2rem 1rem 1.4rem;
   border: 1px solid var(--line);
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--line-strong);
   border-radius: 0 var(--radius) var(--radius) 0;
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%),
-    var(--surface);
+  background: var(--surface);
   color: var(--text);
   box-shadow: var(--bevel);
 }
