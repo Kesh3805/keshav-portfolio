@@ -1,0 +1,172 @@
+---
+// The K mark, drawn inline from lib/brand.ts so it takes the theme through currentColor
+// and --accent / --data. Motion only ever plays once per trigger:
+//   static  — no motion
+//   idle    — still; the data signal runs once when the surrounding link or button is
+//             hovered or focused (the navbar)
+//   signal  — the signal runs once on load
+//   resolve — hub, endpoints, then edges resolve once on load, followed by the signal
+// Reduced motion shows the finished mark and never animates.
+import {
+  MARK,
+  MARK_SMALL,
+  RESOLVE_ORDER,
+  edgeSegments,
+  nodeShapes,
+  signalPath,
+  type MarkState,
+} from '../../lib/brand';
+
+interface Props {
+  /** CSS size: a number is pixels; strings (e.g. "1.4em") pass through. */
+  size?: number | string;
+  /** Light the hub node in the accent colour. */
+  accent?: boolean;
+  state?: MarkState;
+  /** The closed-gap geometry for 16–24px. Defaults on for numeric sizes ≤ 24. */
+  small?: boolean;
+  /** Accessible name. Without one the mark is decorative (aria-hidden). */
+  label?: string;
+  class?: string;
+}
+
+const { size = 32, accent = true, state = 'static', label, class: className } = Astro.props;
+const small = Astro.props.small ?? (typeof size === 'number' && size <= 24);
+const g = small ? MARK_SMALL : MARK;
+const css = typeof size === 'number' ? `${size}px` : size;
+
+const nodeOrder = (id: string) => RESOLVE_ORDER.nodes.indexOf(id as never);
+const nodes = nodeShapes(g).map((n) => ({ ...n, i: nodeOrder(n.id) }));
+const edges = edgeSegments(g).map((e, i) => ({ ...e, i }));
+const animated = state !== 'static';
+---
+
+<svg
+  class:list={['keshav-mark', className]}
+  data-state={state}
+  data-accent={accent ? '' : undefined}
+  viewBox="0 0 32 32"
+  width={css}
+  height={css}
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  aria-hidden={label ? undefined : 'true'}
+  focusable="false"
+>
+  <g class="edges" stroke="currentColor" stroke-width={g.stroke}>
+    {
+      edges.map((e) => (
+        <line
+          x1={e.x1}
+          y1={e.y1}
+          x2={e.x2}
+          y2={e.y2}
+          pathLength={animated ? 1 : undefined}
+          style={animated ? `--i:${e.i}` : undefined}
+        />
+      ))
+    }
+  </g>
+  <g class="nodes" fill="currentColor">
+    {
+      nodes.map((n) => (
+        <polygon
+          points={n.points}
+          class:list={{ accent: n.accent }}
+          style={animated ? `--i:${n.i}` : undefined}
+        />
+      ))
+    }
+  </g>
+  {
+    animated && (
+      <path
+        class="signal"
+        d={signalPath(g)}
+        pathLength="1"
+        fill="none"
+        stroke-width={g.stroke}
+        stroke-linejoin="bevel"
+      />
+    )
+  }
+</svg>
+
+<style>
+  .keshav-mark {
+    display: inline-block;
+    flex: none;
+    overflow: visible;
+    vertical-align: middle;
+  }
+
+  [data-accent] .accent {
+    fill: var(--accent);
+  }
+
+  .signal {
+    stroke: var(--data);
+    stroke-dasharray: 0.16 2;
+    stroke-dashoffset: 0.16;
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* Resolve: the hub, then the endpoints, then the edges draw out of the hub. */
+    [data-state='resolve'] polygon {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: mark-node var(--dur-ui) var(--ease-out) both;
+      animation-delay: calc(var(--i) * 70ms);
+    }
+
+    [data-state='resolve'] line {
+      stroke-dasharray: 1;
+      animation: mark-edge 360ms var(--ease-out) both;
+      animation-delay: calc(320ms + var(--i) * 60ms);
+    }
+
+    [data-state='resolve'] .signal {
+      animation: mark-signal 720ms var(--ease-data) 900ms both;
+    }
+
+    [data-state='signal'] .signal {
+      animation: mark-signal 720ms var(--ease-data) 400ms both;
+    }
+
+    /* Idle: one pass of the signal per hover or keyboard focus of the host control. */
+    :global(:is(a, button):is(:hover, :focus-visible)) [data-state='idle'] .signal {
+      animation: mark-signal 720ms var(--ease-data) both;
+    }
+  }
+
+  @keyframes mark-node {
+    from {
+      transform: scale(0);
+      opacity: 0;
+    }
+  }
+
+  @keyframes mark-edge {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes mark-signal {
+    0% {
+      opacity: 1;
+      stroke-dashoffset: 0.16;
+    }
+    92% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      stroke-dashoffset: -1;
+    }
+  }
+</style>

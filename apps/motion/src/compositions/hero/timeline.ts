@@ -73,3 +73,12 @@ export const CONVERGES_TO: Record<Exclude<ActId, 'convergence'>, string[]> = {
   reconciliation: ['postgres', 'api', 'sse'],
   review: ['memory', 'ai'],
 };
+
+// Which topology node becomes which node of the K, chosen by where they sit on screen.
+export const INTO_MARK: Record<string, string> = {
+  hub: 'api',
+  top: 'redis',
+  base: 'sse',
+  arm: 'memory',
+  leg: 'worker',
+};

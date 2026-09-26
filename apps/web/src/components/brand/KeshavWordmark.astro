@@ -1,0 +1,32 @@
+---
+// The name, set in the site's own type: IBM Plex Sans 600, title case, slight negative
+// tracking — the same as the headings, so the logo never introduces a new voice.
+// `caps` is the signature form (Plex Mono, tracked capitals) used where the name sits
+// over a descriptor: OG images and the film's end card ("KESHAV / SYSTEMS ENGINEER").
+import { site } from '../../site.config';
+
+interface Props {
+  caps?: boolean;
+  class?: string;
+}
+
+const { caps = false, class: className } = Astro.props;
+---
+
+<span class:list={['keshav-wordmark', { caps }, className]}>{caps ? site.name.toUpperCase() : site.name}</span>
+
+<style>
+  .keshav-wordmark {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .caps {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+  }
+</style>
