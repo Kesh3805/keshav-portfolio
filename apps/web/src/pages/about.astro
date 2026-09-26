@@ -1,16 +1,373 @@
 ---
+// About: the person, in the homepage's identity language. The header repeats the hero's
+// signature (name, rule, accent node) at page scale; the thesis is shown, not claimed —
+// three symptoms from the work, each linked to the write-up that explains it. Everything
+// here comes from content/notes/about.md and content/experience.
+import { ArrowRight } from '@lucide/astro';
 import { getEntry, render } from 'astro:content';
-import PageLayout from '../layouts/PageLayout.astro';
+import RoleTimeline from '../components/RoleTimeline.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { IDENTITY_COPY } from '../lib/identity-hero';
+import { getArticles, getExperience } from '../lib/content';
+import { href } from '../lib/paths';
 
 const entry = await getEntry('notes', 'about');
 if (!entry) throw new Error('content/notes/about.md is missing');
 const { Content } = await render(entry);
+const { lede, investigations = [] } = entry.data;
+
+const articles = new Map((await getArticles()).map((a) => [a.data.slug, a]));
+const cases = investigations.map((item) => {
+  const article = articles.get(item.article);
+  if (!article) throw new Error(`about.md: unknown article "${item.article}"`);
+  return { ...item, title: article.data.title, url: href(`/writing/${article.data.slug}`) };
+});
+
+const [experience] = await getExperience();
 ---
 
-<PageLayout
+<BaseLayout
   title="About"
-  kicker="Engineer"
   description="Keshav, software engineer at jpteam / C1X Inc.: production backends, async systems, tenant isolation and AI infrastructure."
 >
-  <Content />
-</PageLayout>
+  <article class="container-page about">
+    <header class="identity">
+      <p class="meta">About</p>
+      <h1 class="name" aria-label="Keshav">
+        {[...IDENTITY_COPY.name].map((ch, i) => (
+          <span class="glyph" style={`--i:${i}`} aria-hidden="true">
+            {ch}
+          </span>
+        ))}
+      </h1>
+      <div class="rule-row" aria-hidden="true">
+        <svg class="rule" viewBox="0 0 1000 24" preserveAspectRatio="none" focusable="false">
+          <line class="line" x1="0" x2="1000" y1="12" y2="12" pathLength="1" />
+        </svg>
+        <span class="node"></span>
+      </div>
+      <p class="role meta">
+        {IDENTITY_COPY.role} · {experience?.data.company ?? 'jpteam / C1X Inc.'}
+      </p>
+      {lede && <p class="lede">{lede}</p>}
+    </header>
+
+    {
+      cases.length > 0 && (
+        <section class="block" aria-labelledby="investigations" data-reveal>
+          <h2 class="section-title" id="investigations">
+            <span class="meta">Investigations</span>
+            Three of them, written up
+          </h2>
+          <ol class="cases">
+            {cases.map((c, i) => (
+              <li>
+                <a class="case" href={c.url}>
+                  <span class="case-index meta">{String(i + 1).padStart(2, '0')} · Symptom</span>
+                  <span class="symptom">{c.symptom}</span>
+                  <span class="article">{c.title}</span>
+                  <span class="read meta">
+                    Read the write-up <ArrowRight size={13} aria-hidden="true" />
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )
+    }
+
+    {
+      experience && (
+        <section class="block path" aria-labelledby="path" data-reveal>
+          <h2 class="section-title" id="path">
+            <span class="meta">Path</span>
+            {experience.data.company}
+          </h2>
+          <RoleTimeline timeline={experience.data.timeline} />
+          <p class="path-note">
+            {experience.data.description}{' '}
+            <a class="link" href={href('/work')}>The work in detail →</a>
+          </p>
+        </section>
+      )
+    }
+
+    <div class="prose body" data-reveal>
+      <Content />
+    </div>
+  </article>
+</BaseLayout>
+
+<style>
+  .about {
+    display: grid;
+    gap: clamp(3rem, 7vw, 5rem);
+    padding-top: clamp(2rem, 6vw, 4rem);
+    padding-bottom: clamp(3rem, 8vw, 6rem);
+  }
+
+  /* ── Identity header: the hero's signature at page scale ─────────────── */
+  .identity {
+    position: relative;
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .name {
+    display: flex;
+    margin-top: 0.4rem;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: clamp(3.4rem, 12vw, 8.5rem);
+    line-height: 0.9;
+    letter-spacing: 0.04em;
+    color: var(--text);
+  }
+
+  .rule {
+    display: block;
+    width: 100%;
+    height: 24px;
+    overflow: visible;
+  }
+
+  .line {
+    stroke: var(--text-subtle);
+    stroke-width: 1.5;
+  }
+
+  .rule-row {
+    position: relative;
+  }
+
+  .node {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 13px;
+    height: 13px;
+    margin: -6.5px -6.5px 0 0;
+    background: var(--accent);
+    rotate: 45deg;
+  }
+
+  .role {
+    color: var(--text-muted);
+    letter-spacing: 0.24em;
+  }
+
+  .lede {
+    max-width: 38rem;
+    margin-top: 1.25rem;
+    font-size: clamp(1.25rem, 2.6vw, 1.7rem);
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+    color: var(--text);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* Each letter opens from its left edge, as the stems do in the hero, then the rule
+       draws and the node lands at its end. Once, on load. */
+    .glyph {
+      animation: glyph-open 520ms var(--ease-out) both;
+      animation-delay: calc(80ms + var(--i) * 45ms);
+    }
+
+    .line {
+      stroke-dasharray: 1;
+      animation: rule-draw 900ms linear 240ms both;
+    }
+
+    .node {
+      animation: node-land var(--dur-ui) var(--ease-out) 1100ms both;
+    }
+  }
+
+  @keyframes glyph-open {
+    from {
+      clip-path: inset(0 100% 0 0);
+      translate: 0 0.08em;
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes rule-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes node-land {
+    from {
+      scale: 0;
+    }
+  }
+
+  /* ── Sections ───────────────────────────────────────────────────────── */
+  .section-title {
+    display: grid;
+    gap: 0.4rem;
+    margin-bottom: 1.4rem;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    letter-spacing: -0.02em;
+  }
+
+  .section-title .meta {
+    color: var(--data);
+  }
+
+  .cases {
+    display: grid;
+    gap: 0.9rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  }
+
+  .case {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: 0.7rem;
+    height: 100%;
+    padding: 1.3rem 1.25rem 1.2rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    color: var(--text);
+    text-decoration: none;
+    overflow: hidden;
+    transition:
+      border-color var(--dur-micro) var(--ease-ui),
+      translate var(--dur-ui) var(--ease-ui);
+  }
+
+  /* A signal traces the top edge once on hover: the same data line as the topology. */
+  .case::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: var(--data);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  .case:hover,
+  .case:focus-visible {
+    border-color: var(--line-strong);
+    translate: 0 -2px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .case:hover::before,
+    .case:focus-visible::before {
+      animation: trace 700ms linear both;
+    }
+  }
+
+  @keyframes trace {
+    0% {
+      transform: scaleX(0);
+      opacity: 1;
+    }
+    85% {
+      transform: scaleX(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scaleX(1);
+      opacity: 0;
+    }
+  }
+
+  .case-index {
+    color: var(--text-subtle);
+  }
+
+  .symptom {
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  .article {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .read {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.3rem;
+    color: var(--text-muted);
+  }
+
+  .case:hover .read {
+    color: var(--accent);
+  }
+
+  .path-note {
+    max-width: 44rem;
+    margin-top: 1.1rem;
+    color: var(--text-muted);
+  }
+
+  /* The markdown body: numbered sections in the notation voice. */
+  .body {
+    counter-reset: about;
+  }
+
+  .body :global(h2) {
+    counter-increment: about;
+  }
+
+  /* Desktop: an editorial two-column set — section titles left, text right. Each section in
+     about.md is one heading followed by one block, so auto-placement pairs them by row. */
+  @media (min-width: 60rem) {
+    .body {
+      display: grid;
+      grid-template-columns: 15rem minmax(0, 1fr);
+      column-gap: 3rem;
+      row-gap: 2.75rem;
+      max-width: none;
+    }
+
+    .body > :global(*) {
+      grid-column: 2;
+      margin: 0;
+      max-width: 44rem;
+    }
+
+    .body > :global(h2) {
+      grid-column: 1;
+      margin: 0;
+      padding-top: 0;
+      border-top: 0;
+      font-size: 1.15rem;
+      line-height: 1.4;
+    }
+
+    .body > :global(h2)::before {
+      content: counter(about, decimal-leading-zero);
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+  }
+
+  .body :global(h2)::before {
+    content: counter(about, decimal-leading-zero) ' · ';
+    font-family: var(--font-mono);
+    font-size: 0.72em;
+    font-weight: 500;
+    color: var(--data);
+  }
+</style>

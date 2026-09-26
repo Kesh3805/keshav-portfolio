@@ -1,8 +1,14 @@
 ---
 title: About
+lede: I'm Keshav, a software engineer at jpteam / C1X Inc. I build systems and investigate the engineering problems underneath them.
+investigations:
+  - symptom: The silent failure behind an HTTP 200
+    article: http-200-integration-failure
+  - symptom: The keyspace mismatch behind an idle queue
+    article: redis-bullmq-namespace-bug
+  - symptom: The read path that should never have been computing anything
+    article: gst-returns-read-model
 ---
-
-I'm Keshav, a software engineer at jpteam / C1X Inc. I build systems and investigate the engineering problems underneath them — the silent failure behind an HTTP 200, the keyspace mismatch behind an idle queue, the read path that should never have been computing anything.
 
 ## Professional focus
 
