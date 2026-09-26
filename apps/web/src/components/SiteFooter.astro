@@ -1,12 +1,17 @@
 ---
 import { downloadName, href, linkHref } from '../lib/paths';
 import { site } from '../site.config';
+import KeshavMark from './brand/KeshavMark.astro';
 ---
 
-<footer class="site-footer">
+<footer class="site-footer" data-reveal>
   <div class="container-page inner">
-    <p class="meta">
-      Static HTML · Astro · GitHub Pages · no trackers
+    <p class="meta sign">
+      <!-- M9: the signal comes home — the mark resolves once when the footer is reached. -->
+      <a class="home" href={href('/')} aria-label={`${site.name} — home`}>
+        <KeshavMark size={20} state="resolve" />
+      </a>
+      <span>Static HTML · Astro · GitHub Pages · no trackers</span>
     </p>
     <ul class="links">
       <li><a class="link" href={href('/now')}>Now</a></li>
@@ -35,6 +40,22 @@ import { site } from '../site.config';
   .site-footer {
     margin-top: 6rem;
     border-top: 1px solid var(--line);
+  }
+
+  .sign {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .home {
+    display: inline-flex;
+    color: var(--text);
+  }
+
+  /* The mark's resolve waits (held on its first frame) until the footer is revealed. */
+  :global(.js) .site-footer:not(:global(.is-revealed)) .home :global(*) {
+    animation-play-state: paused;
   }
 
   .inner {

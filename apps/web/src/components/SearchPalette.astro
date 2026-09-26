@@ -54,10 +54,28 @@ const jumps = nav.map((item) => ({ label: item.label, url: href(item.path) }));
     let items: { url: string; title: string; kind: string }[] = [];
     let active = 0;
 
+    // One highlight element for the whole list; it slides to the selected row (m10).
+    const hl = document.createElement('li');
+    hl.className = 'hl';
+    hl.setAttribute('aria-hidden', 'true');
+    hl.setAttribute('role', 'presentation');
+    const options = () => [...list.querySelectorAll<HTMLElement>('[role="option"]')];
+    const moveHighlight = () => {
+      const row = options()[active];
+      hl.hidden = !row;
+      if (!row) return;
+      hl.style.translate = `0 ${row.offsetTop}px`;
+      hl.style.height = `${row.offsetHeight}px`;
+    };
+
+    /** Rebuilds the list for a new result set; rows stagger in once. */
     const paint = () => {
       list.replaceChildren(
+        hl,
         ...items.map((item, i) => {
           const li = document.createElement('li');
+          li.className = 'enter';
+          li.style.setProperty('--i', String(i));
           li.id = `palette-option-${i}`;
           li.setAttribute('role', 'option');
           li.setAttribute('aria-selected', String(i === active));
@@ -78,12 +96,20 @@ const jumps = nav.map((item) => ({ label: item.label, url: href(item.path) }));
         }),
       );
       input.setAttribute('aria-activedescendant', items.length ? `palette-option-${active}` : '');
+      hl.style.transition = 'none';
+      requestAnimationFrame(() => {
+        moveHighlight();
+        requestAnimationFrame(() => (hl.style.transition = ''));
+      });
     };
 
+    /** Moves the selection without rebuilding the list, so the highlight can slide. */
     const setActive = (i: number) => {
       active = (i + items.length) % items.length;
-      paint();
-      list.children[active]?.scrollIntoView({ block: 'nearest' });
+      options().forEach((li, n) => li.setAttribute('aria-selected', String(n === active)));
+      input.setAttribute('aria-activedescendant', `palette-option-${active}`);
+      moveHighlight();
+      options()[active]?.scrollIntoView({ block: 'nearest' });
     };
 
     const run = async () => {
@@ -184,7 +210,8 @@ const jumps = nav.map((item) => ({ label: item.label, url: href(item.path) }));
   @keyframes palette-in {
     from {
       opacity: 0;
-      translate: 0 -6px;
+      translate: 0 -8px;
+      scale: 0.985;
     }
   }
 
@@ -234,8 +261,44 @@ const jumps = nav.map((item) => ({ label: item.label, url: href(item.path) }));
   }
 
   ul {
+    position: relative;
     overflow-y: auto;
     padding: 0 0.5rem 0.5rem;
+  }
+
+  ul :global(.hl) {
+    position: absolute;
+    top: 0;
+    left: 0.5rem;
+    right: 0.5rem;
+    border-radius: var(--radius);
+    background: var(--surface-raised);
+    box-shadow: var(--bevel), inset 2px 0 0 var(--accent);
+    pointer-events: none;
+  }
+
+  ul :global([role='option']) {
+    position: relative;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    ul :global(.hl) {
+      transition:
+        translate 200ms var(--ease-out),
+        height 200ms var(--ease-out);
+    }
+
+    ul :global(.enter) {
+      animation: row-in 260ms var(--ease-out) both;
+      animation-delay: calc(var(--i) * 28ms);
+    }
+  }
+
+  @keyframes row-in {
+    from {
+      opacity: 0;
+      translate: 0 4px;
+    }
   }
 
   ul :global(a) {
@@ -249,8 +312,7 @@ const jumps = nav.map((item) => ({ label: item.label, url: href(item.path) }));
   }
 
   ul :global([aria-selected='true'] a) {
-    background: var(--surface-raised);
-    box-shadow: var(--bevel), inset 2px 0 0 var(--accent);
+    color: var(--text);
   }
 
   ul :global(a .meta) {

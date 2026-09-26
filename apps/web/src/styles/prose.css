@@ -178,6 +178,7 @@
 /* Code blocks: figure > figcaption.code-header + pre.astro-code */
 .prose .code-block,
 .code-block {
+  position: relative;
   margin-inline: calc(var(--gutter) * -0.5);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -218,6 +219,7 @@
 }
 
 .code-copy {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -244,34 +246,80 @@
   transform: scale(0.96);
 }
 
-.code-check-icon {
-  display: none;
-}
-
 .code-copy[data-state='copied'] {
   color: var(--ok);
   border-color: var(--ok);
 }
 
+/* m9 — copy → check: both icons share one spot; the copy icon turns away while the
+   check mark draws its stroke. */
+.code-check-icon {
+  position: absolute;
+  left: 0.5rem;
+  opacity: 0;
+}
+
 .code-copy[data-state='copied'] .code-copy-icon {
-  display: none;
+  opacity: 0;
 }
 
 .code-copy[data-state='copied'] .code-check-icon {
-  display: block;
-  animation: copy-confirm var(--dur-ui) var(--ease-out);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .code-copy-icon {
+    transition:
+      opacity 160ms var(--ease-ui),
+      rotate 260ms var(--ease-out),
+      scale 260ms var(--ease-out);
+  }
+
+  .code-copy[data-state='copied'] .code-copy-icon {
+    rotate: -45deg;
+    scale: 0.4;
+  }
+
+  .code-check-icon path {
+    stroke-dasharray: 24;
+    stroke-dashoffset: 24;
+  }
+
+  .code-copy[data-state='copied'] .code-check-icon path {
+    animation: check-draw 320ms var(--ease-out) 60ms forwards;
+  }
+
+  /* m9 — a data line traces down the code's left edge once on hover. */
+  .code-block::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background: var(--data);
+    transform: scaleY(0);
+    transform-origin: top;
+    opacity: 0.8;
+    pointer-events: none;
+    transition: transform 160ms var(--ease-ui);
+  }
+
+  .code-block:hover::after {
+    transform: scaleY(1);
+    transition: transform 700ms linear;
+  }
+}
+
+@keyframes check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .code-copy[data-state='failed'] {
   color: var(--error);
   border-color: var(--error);
-}
-
-@keyframes copy-confirm {
-  from {
-    opacity: 0;
-    scale: 0.6;
-  }
 }
 
 /* Heading permalinks (added by ContentScripts): quiet until the heading is hovered or focused. */

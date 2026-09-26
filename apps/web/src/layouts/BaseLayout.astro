@@ -7,6 +7,8 @@ import '@fontsource/ibm-plex-sans/500.css';
 import '@fontsource/ibm-plex-sans/600.css';
 import '../styles/global.css';
 import '../styles/motion.css';
+import bodyFont from '@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2?url';
+import headingFont from '@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2?url';
 import ContentScripts from '../components/ContentScripts.astro';
 import SearchPalette from '../components/SearchPalette.astro';
 import Seo, { type Props as SeoProps } from '../components/Seo.astro';
@@ -28,6 +30,9 @@ export type Props = SeoProps;
     <meta name="theme-color" content="#f4f2ed" media="(prefers-color-scheme: light)" />
     <meta name="generator" content={Astro.generator} />
     <ThemeScript />
+    <!-- Body and heading faces: preloaded so a late swap cannot re-wrap text and shift the layout. -->
+    <link rel="preload" href={bodyFont} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={headingFont} as="font" type="font/woff2" crossorigin />
     <link rel="icon" href={href('/favicon.ico')} sizes="32x32" />
     <link rel="icon" href={href('/favicon.svg')} type="image/svg+xml" />
     <link rel="apple-touch-icon" href={href('/apple-touch-icon.png')} />
@@ -50,6 +55,17 @@ export type Props = SeoProps;
         } catch {
           /* storage blocked: no morph, the page still transitions */
         }
+      });
+      // M6 — direction: going up the hierarchy (a case study back to its list) reverses the
+      // wipe. Transition pseudo-elements belong to the new document, so the class is set here.
+      addEventListener('pagereveal', (event) => {
+        if (!event.viewTransition) return;
+        const from = window.navigation?.activation?.from?.url;
+        if (!from) return;
+        const depth = (u) => new URL(u).pathname.split('/').filter(Boolean).length;
+        if (depth(location.href) >= depth(from)) return;
+        document.documentElement.classList.add('vt-back');
+        event.viewTransition.finished.finally(() => document.documentElement.classList.remove('vt-back'));
       });
       addEventListener('pagereveal', (event) => {
         let target = null;
@@ -82,10 +98,11 @@ export type Props = SeoProps;
       //   [data-reveal]  the block fades up
       //   [data-stagger] its children arrive in order (index set here as --i)
       //   [data-roll]    metric digits roll to their value
+      //   [data-diagram] a diagram's edges draw in (M8)
       for (const list of document.querySelectorAll<HTMLElement>('[data-stagger]')) {
         [...list.children].forEach((child, i) => (child as HTMLElement).style.setProperty('--i', String(i)));
       }
-      const blocks = document.querySelectorAll('[data-reveal], [data-stagger], [data-roll]');
+      const blocks = document.querySelectorAll('[data-reveal], [data-stagger], [data-roll], [data-diagram]');
       if (blocks.length) {
         const io = new IntersectionObserver(
           (entries) => {

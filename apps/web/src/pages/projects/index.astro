@@ -32,7 +32,7 @@ const filters = [
         Inc.; personal projects are my own repositories.
       </p>
 
-      <div class="filters" role="group" aria-label="Filter projects by area" data-filters hidden>
+      <div class="filters" role="group" aria-label="Filter projects by area" data-filters>
         <button type="button" class="pill" data-filter="all" aria-pressed="true">
           All <span class="n">{all.length}</span>
         </button>
@@ -44,6 +44,9 @@ const filters = [
           ))
         }
       </div>
+      <p class="meta showing" aria-hidden="true" data-showing>
+        Showing <span class="count" data-shown>{all.length}</span> of {all.length}
+      </p>
       <p class="sr-only" role="status" aria-live="polite" data-filter-status></p>
     </header>
 
@@ -76,7 +79,9 @@ const filters = [
     const pills = [...bar.querySelectorAll<HTMLButtonElement>('[data-filter]')];
     const cards = [...document.querySelectorAll<HTMLElement>('.cards [data-slug]')];
     const status = document.querySelector<HTMLElement>('[data-filter-status]')!;
-    bar.hidden = false;
+    const shownEl = document.querySelector<HTMLElement>('[data-shown]')!;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+
 
     const apply = (id: string, sync = true) => {
       const pill = pills.find((p) => p.dataset.filter === id) ?? pills[0]!;
@@ -94,6 +99,13 @@ const filters = [
         group.querySelector<HTMLElement>('.none')!.hidden = any;
       }
       status.textContent = `Showing ${shown} of ${cards.length} projects`;
+      // m8 — the visible count rolls to its new value.
+      if (shownEl.textContent !== String(shown)) {
+        shownEl.textContent = String(shown);
+        shownEl.classList.remove('tick');
+        void shownEl.offsetWidth;
+        shownEl.classList.add('tick');
+      }
 
       if (sync) {
         const url = new URL(location.href);
@@ -103,7 +115,23 @@ const filters = [
       }
     };
 
-    for (const pill of pills) pill.addEventListener('click', () => apply(pill.dataset.filter!));
+    // M7 — cards glide to their new places: each card is its own transition layer for the
+    // length of the change, so moves, arrivals and departures animate instead of jumping.
+    const filter = (id: string) => {
+      if (!document.startViewTransition || reduced.matches) return apply(id);
+      cards.forEach((card) => {
+        card.style.viewTransitionName = `card-${card.dataset.slug}`;
+        card.style.setProperty('view-transition-class', 'card');
+      });
+      const vt = document.startViewTransition(() => apply(id));
+      vt.finished.finally(() =>
+        cards.forEach((card) => {
+          card.style.viewTransitionName = '';
+          card.style.removeProperty('view-transition-class');
+        }),
+      );
+    };
+    for (const pill of pills) pill.addEventListener('click', () => filter(pill.dataset.filter!));
     apply(new URLSearchParams(location.search).get('filter') ?? 'all', false);
   }
 </script>
@@ -116,6 +144,48 @@ const filters = [
   }
 
 
+  .showing {
+    margin-top: 0.9rem;
+  }
+
+  /* With JS the filter bar and count are part of the first paint, so revealing them later
+     (the script unhides them) never moves the cards below. Without JS they stay hidden. */
+  /* The filter bar and count need JS, so they exist only when it runs — decided by the
+     html.js class set in <head>, so they are part of the first paint and never shift the
+     cards. (Not the hidden attribute: the base reset hides [hidden] with a layered
+     !important that no unlayered rule can override.) */
+  .filters,
+  .showing {
+    display: none;
+  }
+
+  :global(html.js) .filters {
+    display: flex;
+  }
+
+  :global(html.js) .showing {
+    display: block;
+  }
+
+  .count {
+    display: inline-block;
+    min-width: 1ch;
+    color: var(--data);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .count.tick {
+      animation: count-tick 320ms var(--ease-out);
+    }
+  }
+
+  @keyframes count-tick {
+    from {
+      opacity: 0;
+      translate: 0 0.6em;
+    }
+  }
+
   .lede {
     margin-top: 1rem;
     max-width: 40rem;
@@ -124,7 +194,6 @@ const filters = [
   }
 
   .filters {
-    display: flex;
     flex-wrap: wrap;
     gap: 0.45rem;
     margin-top: 1.75rem;

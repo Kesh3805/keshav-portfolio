@@ -15,6 +15,7 @@ const items = [...headings.filter((h) => h.depth === 2), ...extra];
     <nav class="toc" aria-label="On this page">
       <p class="meta">On this page</p>
       <ol>
+        <li class="marker" aria-hidden="true" />
         {items.map((item) => (
           <li>
             <a href={`#${item.slug}`}>{item.text}</a>
@@ -47,7 +48,14 @@ const items = [...headings.filter((h) => h.depth === 2), ...extra];
         if (on) a.setAttribute('aria-current', 'true');
         else a.removeAttribute('aria-current');
       });
+      // The marker glides to the active entry instead of jumping between links.
+      const active = links[current];
+      if (marker && active) {
+        marker.style.translate = `0 ${active.offsetTop}px`;
+        marker.style.height = `${active.offsetHeight}px`;
+      }
     };
+    const marker = toc.querySelector<HTMLElement>('.marker');
 
     const io = new IntersectionObserver(update, { rootMargin: '0px 0px -65% 0px', threshold: 0 });
     targets.forEach((el) => io.observe(el));
@@ -58,11 +66,11 @@ const items = [...headings.filter((h) => h.depth === 2), ...extra];
 <style>
   .toc a.active {
     color: var(--text);
-    border-left-color: var(--accent);
     font-weight: 500;
   }
 
   .toc ol {
+    position: relative;
     margin-top: 0.75rem;
     display: grid;
     gap: 0.1rem;
@@ -84,6 +92,26 @@ const items = [...headings.filter((h) => h.depth === 2), ...extra];
 
   .toc a:hover {
     color: var(--text);
-    border-left-color: var(--accent);
+    border-left-color: var(--line-strong);
+  }
+
+  /* One accent marker on the rail, moved to the active entry. */
+  .marker {
+    position: absolute;
+    top: 0;
+    left: -1px;
+    width: 2px;
+    height: 0;
+    background: var(--accent);
+    border-radius: 1px;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .marker {
+      transition:
+        translate var(--dur-ui) var(--ease-out),
+        height var(--dur-ui) var(--ease-out);
+    }
   }
 </style>

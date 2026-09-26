@@ -24,7 +24,8 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
           nav.map((item) => (
             <li>
               <a href={href(item.path)} aria-current={isActive(item.path) ? 'page' : undefined}>
-                {item.label}
+                {isActive(item.path) && <span class="pill-bg" aria-hidden="true" />}
+                <span class="label">{item.label}</span>
               </a>
             </li>
           ))
@@ -218,13 +219,32 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
     color: var(--text);
   }
 
+  .primary a {
+    position: relative;
+  }
+
   .primary a[aria-current='page'] {
     color: var(--text);
+  }
+
+  /* The active pill is its own element with its own transition name, so between pages
+     it slides from the old item to the new one while the labels stay put (m4). */
+  .pill-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: 999px;
     background: var(--surface-raised);
     box-shadow:
       var(--bevel),
       0 0 0 1px var(--line),
       inset 0 -1px 0 color-mix(in srgb, var(--accent) 70%, transparent);
+    view-transition-name: nav-pill;
+  }
+
+  .label {
+    position: relative;
+    z-index: 1;
   }
 
   .mobile a[aria-current='page'] {

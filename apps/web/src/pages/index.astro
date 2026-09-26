@@ -2,6 +2,7 @@
 import { getCollection, getEntry, render } from 'astro:content';
 import KeshavMark from '../components/brand/KeshavMark.astro';
 import IdentityHero from '../components/IdentityHero.astro';
+import ScrollRail from '../components/ScrollRail.astro';
 import ProjectCard from '../components/ProjectCard.astro';
 import RoleTimeline from '../components/RoleTimeline.astro';
 import SectionHeader from '../components/SectionHeader.astro';
@@ -46,9 +47,12 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
 
 <BaseLayout>
   <IdentityHero />
+  <ScrollRail stops="main > section[aria-labelledby]" />
 
   <!-- The exploration: the systems the work runs on, below the identity hero. -->
   <section class="systems grid-backdrop" aria-labelledby="systems-title">
+    <!-- M4: where the hero's dropping signal lands, on this section's top rule. -->
+    <span class="landing" aria-hidden="true"></span>
     <div class="container-page systems-inner">
       <div class="systems-copy">
         <p class="kicker">
@@ -268,6 +272,51 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
 </BaseLayout>
 
 <style>
+  .landing {
+    display: none;
+  }
+
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      /* The same x as the hero's accent node: the stage's width and centring, repeated. */
+      .landing {
+        --sw: min(100%, calc((100svh - 4.75rem) * 4 / 5));
+        --at: 0.9259;
+        display: block;
+        position: absolute;
+        top: 0;
+        left: calc(50% - var(--sw) / 2 + var(--sw) * var(--at));
+        width: 9px;
+        height: 9px;
+        margin: -4.5px 0 0 -4.5px;
+        background: var(--data);
+        rotate: 45deg;
+        z-index: 1;
+        /* Longhands, and not all of them: the minifier would otherwise fold the timeline into the
+           animation shorthand, where it is not allowed, and the browser would drop the rule. */
+        animation-name: land;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --identity;
+        animation-range: exit 38% exit 52%;
+      }
+
+      @media (min-width: 56.25rem) {
+        .landing {
+          --sw: min(100%, calc((100svh - 4.75rem) * 16 / 9));
+          --at: 0.9167;
+        }
+      }
+    }
+  }
+
+  @keyframes land {
+    from {
+      scale: 0;
+      opacity: 0;
+    }
+  }
+
   .systems {
     position: relative;
     border-block: 1px solid var(--line);

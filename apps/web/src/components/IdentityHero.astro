@@ -103,6 +103,12 @@ const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.
               </text>
             ))}
           </svg>
+          {/* M4: as the hero scrolls away, the signal drops from its node toward the systems below. */}
+          <span
+            class="drop"
+            aria-hidden="true"
+            style={`left: ${pct(l.right, l.width)}; top: ${pct(l.rule.y, l.height)}`}
+          />
           <div class="ctas" style={`left: ${pct(l.left, l.width)}; top: ${pct(l.ctaTop, l.height)}`}>
             <a class="btn btn-primary" href={href('/work')}>Explore work</a>
             <a class="btn" href={href('/writing')}>Read writing</a>
@@ -334,10 +340,51 @@ const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.
     display: none;
   }
 
-  /* Replay: quiet, bottom-right of the stage, hidden while the sequence plays. */
+  /* M4 — the drop: scroll-driven, so it tracks the hero leaving the viewport. */
+  .drop {
+    display: none;
+  }
+
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .identity {
+        view-timeline: --identity block;
+      }
+
+      .drop {
+        display: block;
+        position: absolute;
+        bottom: 0;
+        width: 1.5px;
+        margin-left: -0.75px;
+        background: linear-gradient(var(--data), color-mix(in srgb, var(--data) 20%, transparent));
+        transform-origin: top;
+        /* Longhands, and not all of them: the minifier would otherwise fold the timeline into the
+           animation shorthand, where it is not allowed, and the browser would drop the rule. */
+        animation-name: drop;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --identity;
+        animation-range: exit 0% exit 45%;
+      }
+
+      .is-intro .drop {
+        display: none;
+      }
+    }
+  }
+
+  @keyframes drop {
+    from {
+      transform: scaleY(0);
+    }
+  }
+
+  /* Replay: quiet, hidden while the sequence plays. */
+  /* Bottom-left, on the text margin: the right side belongs to the signal's drop (M4). */
   .replay {
     position: absolute;
-    right: max(1rem, calc((100% - min(100%, var(--room) * 16 / 9)) / 2 + 1rem));
+    left: max(1rem, calc((100% - min(100%, var(--room) * 16 / 9)) / 2 + 1rem));
     bottom: 0.75rem;
     padding: 0.25rem 0.5rem;
     border: 0;
