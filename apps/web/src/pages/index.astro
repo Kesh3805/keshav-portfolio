@@ -1,6 +1,7 @@
 ---
 import { ArrowRight } from '@lucide/astro';
 import { getCollection, getEntry, render } from 'astro:content';
+import KeshavMark from '../components/brand/KeshavMark.astro';
 import ProjectCard from '../components/ProjectCard.astro';
 import RoleTimeline from '../components/RoleTimeline.astro';
 import SectionHeader from '../components/SectionHeader.astro';
@@ -51,7 +52,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     <div class="container-page hero-inner">
       <div class="hero-copy">
         <p class="kicker">
-          <span class="pulse" aria-hidden="true"></span>
+          <KeshavMark size={16} state="resolve" class="kicker-mark" />
           <span>Software Engineer</span>
           <span class="sep" aria-hidden="true">/</span>
           <span>jpteam · C1X Inc.</span>
@@ -309,13 +310,8 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     color: var(--faint);
   }
 
-  .pulse {
-    position: relative;
-    width: 0.45rem;
-    height: 0.45rem;
-    border-radius: 50%;
-    background: var(--ok);
-    box-shadow: 0 0 10px var(--ok);
+  .hero :global(.kicker-mark) {
+    color: var(--text);
   }
 
 

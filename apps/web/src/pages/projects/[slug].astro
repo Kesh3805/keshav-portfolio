@@ -1,6 +1,7 @@
 ---
 import { ArrowLeft, ExternalLink } from '@lucide/astro';
 import { render } from 'astro:content';
+import KeshavMark from '../../components/brand/KeshavMark.astro';
 import MetricValue from '../../components/MetricValue.astro';
 import MotionFigure from '../../components/MotionFigure.astro';
 import Toc from '../../components/Toc.astro';
@@ -59,7 +60,9 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
         <ArrowLeft size={14} aria-hidden="true" />
         {data.category === 'professional' ? 'Work' : 'Projects'}
       </a>
-      <p class="category" data-category={data.category}>{categoryLabel}</p>
+      <p class="category with-mark" data-category={data.category}>
+        <KeshavMark size={14} accent={data.category === 'professional'} />{categoryLabel}
+      </p>
       <h1 data-project-title>{data.title}</h1>
       <p class="description">{data.description}</p>
     </header>
@@ -245,6 +248,17 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
 
   .back:hover {
     color: var(--text);
+  }
+
+  /* The mark stands in for the category square: its hub carries the accent for professional work. */
+  .with-mark {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .with-mark::before {
+    content: none;
   }
 
   h1 {

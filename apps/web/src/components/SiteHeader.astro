@@ -3,6 +3,7 @@ import { Menu, Search, X } from '@lucide/astro';
 import { href } from '../lib/paths';
 import { nav, site } from '../site.config';
 import ThemeToggle from './ThemeToggle.astro';
+import KeshavLogo from './brand/KeshavLogo.astro';
 
 const current = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/';
 const isActive = (path: string) => current === path || current.startsWith(`${path}/`);
@@ -13,9 +14,8 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
   <div class="container-page shell">
   <div class="island">
   <div class="bar">
-    <a class="wordmark" href={href('/')}>
-      <span class="mark" aria-hidden="true">k/</span>
-      <span>{site.name}</span>
+    <a class="wordmark" href={href('/')} aria-label={`${site.name} — home`}>
+      <KeshavLogo variant="horizontal" state="idle" small />
     </a>
 
     <nav class="primary" aria-label="Primary">
@@ -175,17 +175,10 @@ const isActive = (path: string) => current === path || current.startsWith(`${pat
 
   .wordmark {
     display: inline-flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    align-items: center;
+    font-size: 1rem;
     text-decoration: none;
-  }
-
-  .mark {
-    font-family: var(--font-mono);
-    font-weight: 500;
-    color: var(--accent);
+    color: var(--text);
   }
 
   .primary {

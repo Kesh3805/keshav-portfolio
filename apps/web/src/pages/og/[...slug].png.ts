@@ -4,10 +4,13 @@ import { colors } from '@keshav/motion-tokens';
 import { Resvg } from '@resvg/resvg-js';
 import type { APIContext, GetStaticPaths } from 'astro';
 import satori from 'satori';
+import { markSvg } from '../../lib/brand';
 import { getArticles, getProjects } from '../../lib/content';
 import { site } from '../../site.config';
 
 interface Card {
+  /** The site's own card: the mark is shown large beside the headline. */
+  home?: boolean;
   kicker: string;
   title: string;
   description: string;
@@ -20,6 +23,7 @@ export const getStaticPaths = (async () => {
     {
       params: { slug: 'default' },
       props: {
+        home: true,
         kicker: 'Engineering portfolio',
         title: site.headline,
         description: site.description,
@@ -72,7 +76,34 @@ const h = (type: string, style: Record<string, unknown>, children?: unknown): No
   props: { style, children },
 });
 
-function template({ kicker, title, description, chips }: Card): Node {
+const mark = (size: number) => ({
+  type: 'img',
+  props: {
+    width: size,
+    height: size,
+    src: `data:image/svg+xml;base64,${Buffer.from(markSvg({ size, color: colors.text, accent: colors.accent })).toString('base64')}`,
+  },
+});
+
+/** The signature lockup: mark, then KESHAV over SYSTEMS ENGINEER. */
+const signature = () =>
+  h('div', { display: 'flex', alignItems: 'center', gap: 18 }, [
+    mark(56),
+    h('div', { display: 'flex', flexDirection: 'column', gap: 6, fontFamily: 'Plex Mono' }, [
+      h(
+        'div',
+        { display: 'flex', fontSize: 24, letterSpacing: 4, color: colors.text },
+        site.name.toUpperCase(),
+      ),
+      h(
+        'div',
+        { display: 'flex', fontSize: 15, letterSpacing: 3, color: colors.muted },
+        'SYSTEMS ENGINEER',
+      ),
+    ]),
+  ]);
+
+function template({ home, kicker, title, description, chips }: Card): Node {
   const grid = `linear-gradient(${colors.line}55 1px, transparent 1px), linear-gradient(90deg, ${colors.line}55 1px, transparent 1px)`;
   return h(
     'div',
@@ -92,9 +123,15 @@ function template({ kicker, title, description, chips }: Card): Node {
     [
       h(
         'div',
-        { display: 'flex', justifyContent: 'space-between', fontFamily: 'Plex Mono', fontSize: 22 },
+        {
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontFamily: 'Plex Mono',
+          fontSize: 22,
+        },
         [
-          h('div', { display: 'flex', color: colors.accent }, `k/ ${site.name}`),
+          signature(),
           h(
             'div',
             { display: 'flex', color: colors.muted, textTransform: 'uppercase', letterSpacing: 2 },
@@ -102,23 +139,26 @@ function template({ kicker, title, description, chips }: Card): Node {
           ),
         ],
       ),
-      h('div', { display: 'flex', flexDirection: 'column', gap: 24 }, [
-        h(
-          'div',
-          {
-            display: 'flex',
-            fontSize: title.length > 48 ? 58 : 72,
-            fontWeight: 600,
-            lineHeight: 1.06,
-            letterSpacing: -2,
-          },
-          title,
-        ),
-        h(
-          'div',
-          { display: 'flex', fontSize: 28, lineHeight: 1.4, color: colors.muted, maxWidth: 960 },
-          description,
-        ),
+      h('div', { display: 'flex', alignItems: 'center', gap: 56 }, [
+        h('div', { display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }, [
+          h(
+            'div',
+            {
+              display: 'flex',
+              fontSize: title.length > 48 ? 58 : 72,
+              fontWeight: 600,
+              lineHeight: 1.06,
+              letterSpacing: -2,
+            },
+            title,
+          ),
+          h(
+            'div',
+            { display: 'flex', fontSize: 28, lineHeight: 1.4, color: colors.muted, maxWidth: 960 },
+            description,
+          ),
+        ]),
+        ...(home ? [mark(220)] : []),
       ]),
       h(
         'div',
