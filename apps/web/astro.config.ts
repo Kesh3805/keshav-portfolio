@@ -10,8 +10,8 @@ import { transformerCodeFrame } from './src/lib/markdown/shiki-code-frame';
 
 // The deploy workflow supplies these from actions/configure-pages so the same
 // build works for a project page, a user page, or a custom domain.
-const site = process.env.SITE_URL ?? 'https://kesh3805.github.io';
-const base = process.env.BASE_PATH ?? '/keshav-portfolio';
+const site = process.env.SITE_URL || 'https://amkeshav.me';
+const base = process.env.BASE_PATH || '/';
 
 export default defineConfig({
   site,

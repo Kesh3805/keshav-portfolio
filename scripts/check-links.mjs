@@ -11,8 +11,8 @@ import { join, relative, resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const dist = resolve(root, 'apps/web/dist');
-const base = (process.env.BASE_PATH ?? '/keshav-portfolio').replace(/\/+$/, '');
-const site = (process.env.SITE_URL ?? 'https://kesh3805.github.io').replace(/\/+$/, '');
+const base = (process.env.BASE_PATH || '').replace(/\/+$/, '');
+const site = (process.env.SITE_URL || 'https://amkeshav.me').replace(/\/+$/, '');
 const checkExternal = process.argv.includes('--external');
 
 const REQUIRED = [
