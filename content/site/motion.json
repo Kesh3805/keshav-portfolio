@@ -86,7 +86,7 @@
       "Return status was assembled on every read (3,000ms+); GSTR-1 and GSTR-3B writers now keep a precomputed projection fresh, and the read takes under 15ms at peak load.",
       "BARA classifies each message first; 41 deterministic gates decide whether to retrieve. An acknowledgement retrieves nothing; a message that refers back opens only the research and episodic tiers.",
       "Antigravity reviews a pull request in a temporary worktree; a finding without a diff line is dropped, the worktree is removed, and the main branch is never touched.",
-      "The systems resolve into the architecture on the homepage: Redis, BullMQ and workers, the AI pipeline, PostgreSQL, the NestJS API, SSE and pgvector memory."
+      "The systems resolve into the architecture on the homepage: Redis, BullMQ and workers, the AI pipeline, PostgreSQL, the NestJS API, SSE and pgvector memory. That topology contracts into the K mark from the site header, followed by the name, the role and the site headline."
     ]
   }
 ]

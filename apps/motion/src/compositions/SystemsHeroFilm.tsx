@@ -115,16 +115,17 @@ export function SystemsHeroFilm() {
   const camera = cameraAt(frame);
   const conv = ACTS.convergence.start;
 
-  // During convergence the four systems recede so the architecture they share can come forward.
+  // During convergence the four systems recede so the architecture they share can come forward,
+  // and are gone by the time the topology has contracted into the K (Act5Convergence).
   const world = interpolate(
     frame,
-    [conv + 50, conv + 72, conv + 120, conv + 145],
+    [conv + 50, conv + 72, conv + 108, conv + 126],
     [1, 0.18, 0.18, 0],
     clamp,
   );
-  const captions = 1 - interpolate(frame, [conv + 120, conv + 140], [0, 1], clamp);
+  const captions = 1 - interpolate(frame, [conv + 110, conv + 128], [0, 1], clamp);
   // Panel frames fade on their own schedule so a lit frame reads even while its content recedes.
-  const panels = interpolate(frame, [conv, conv + 30, conv + 124, conv + 146], [0, 1, 1, 0], clamp);
+  const panels = interpolate(frame, [conv, conv + 30, conv + 110, conv + 128], [0, 1, 1, 0], clamp);
 
   const order = ['concurrency', 'pipeline', 'reconciliation', 'review'] as const;
   const lit = (id: (typeof order)[number]) => {
