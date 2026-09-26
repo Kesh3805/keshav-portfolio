@@ -155,6 +155,18 @@ const total = chapters.at(-1)?.to ?? 0;
     };
 
     for (const v of videos) {
+      // <source> fallback only covers unsupported types, not a file that fails to decode:
+      // retry once with the MP4 from the same position.
+      v.addEventListener('error', () => {
+        const mp4 = v.querySelector<HTMLSourceElement>('source[type="video/mp4"]')?.src;
+        if (!mp4 || v.currentSrc === mp4) return;
+        const at = v.currentTime;
+        v.src = mp4;
+        v.addEventListener('loadedmetadata', () => {
+          v.currentTime = at;
+          void v.play().catch(() => {});
+        }, { once: true });
+      }, true);
       v.addEventListener('play', () => {
         root.classList.add('is-playing', 'has-started');
         root.classList.remove('is-ended');

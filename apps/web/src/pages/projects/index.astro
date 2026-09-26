@@ -1,4 +1,5 @@
 ---
+import SignalTitle from '../../components/SignalTitle.astro';
 import ProjectCard from '../../components/ProjectCard.astro';
 import SectionHeader from '../../components/SectionHeader.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
@@ -25,8 +26,7 @@ const filters = [
 >
   <div class="container-page page">
     <header class="page-head">
-      <p class="meta">Index</p>
-      <h1>Projects</h1>
+      <SignalTitle kicker="Index" text="Projects" />
       <p class="lede">
         Two groups, kept apart on purpose. Professional work was built inside a team at jpteam / C1X
         Inc.; personal projects are my own repositories.
@@ -51,7 +51,7 @@ const filters = [
       <SectionHeader index="A" label="Professional" id="professional">
         <a class="link more" href={href('/work')}>Read as work history →</a>
       </SectionHeader>
-      <div class="cards">
+      <div class="cards" data-stagger>
         {professional.map((project, i) => <ProjectCard project={project} index={i + 1} />)}
       </div>
       <p class="none meta" hidden>No professional projects in this area.</p>
@@ -59,7 +59,7 @@ const filters = [
 
     <section aria-labelledby="personal" data-group>
       <SectionHeader index="B" label="Personal / Open Source" id="personal" />
-      <div class="cards">
+      <div class="cards" data-stagger>
         {personal.map((project, i) => <ProjectCard project={project} index={i + 1} />)}
       </div>
       <p class="none meta" hidden>No personal projects in this area.</p>
@@ -115,11 +115,6 @@ const filters = [
     padding-top: clamp(2rem, 6vw, 4rem);
   }
 
-  h1 {
-    margin-top: 0.5rem;
-    font-size: clamp(2.2rem, 6vw, 3.4rem);
-    letter-spacing: -0.035em;
-  }
 
   .lede {
     margin-top: 1rem;

@@ -1,15 +1,50 @@
 ---
+// 404: the site's signal, looking for a route. It travels the ruler past each lookup,
+// finds nothing at the end and falls off it — once. With reduced motion, the ruler is
+// shown with the empty end and no signal.
+import SignalTitle from '../components/SignalTitle.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { href } from '../lib/paths';
+
+const stops = [
+  { x: 190, label: 'ROUTE TABLE' },
+  { x: 380, label: 'STATIC ASSETS' },
+  { x: 570, label: 'REDIRECTS' },
+];
+// The signal crosses the 640px ruler in 68% of 3.5s; each stop answers as it is passed.
+const passAt = (x: number) => (((x - 20) / 640) * 3.5 * 0.68).toFixed(2);
+const diamond = (x: number, y: number, r: number) => `${x},${y - r} ${x + r},${y} ${x},${y + r} ${x - r},${y}`;
 ---
 
 <BaseLayout title="Not found" description="This page does not exist." noindex>
   <div class="container-page page">
-    <p class="meta">HTTP 404</p>
-    <h1>Nothing is listening on this path.</h1>
+    <svg class="lookup" viewBox="0 0 760 170" role="img" aria-label="A signal checks the route table, static assets and redirects, reaches the end of the line and falls off it.">
+      <line class="ruler" x1="20" x2="660" y1="60" y2="60" />
+      <line class="end" x1="660" x2="660" y1="52" y2="68" />
+      {
+        stops.map((s) => (
+          <g class="stop" style={`--at:${passAt(s.x)}s`}>
+            <polygon points={diamond(s.x, 60, 7)} />
+            <text x={s.x} y="96" text-anchor="middle">
+              {s.label}
+            </text>
+            <text class="miss" x={s.x} y="116" text-anchor="middle">
+              MISS
+            </text>
+          </g>
+        ))
+      }
+      <g class="signal">
+        <polygon points={diamond(20, 60, 6)} />
+      </g>
+    </svg>
+
+    <SignalTitle kicker="HTTP 404" text="Nothing is listening on this path." rule={false} morph={false} class="nf-title" />
+
     <pre class="trace" aria-label="Lookup trace"><code><span class="dim">GET</span> <span data-path>this page</span>
 <span class="dim">  →</span> route table ........ <span class="miss">miss</span>
 <span class="dim">  →</span> static assets ...... <span class="miss">miss</span>
+<span class="dim">  →</span> redirects .......... <span class="miss">miss</span>
 <span class="dim">  →</span> response ........... 404, and at least it says so</code></pre>
     <p class="lede">
       Unlike some integrations, this one reports failure honestly. Try the
@@ -28,13 +63,46 @@ import { href } from '../lib/paths';
   .page {
     display: grid;
     gap: 1.5rem;
-    max-width: 44rem;
-    padding-block: clamp(3rem, 10vw, 7rem) 2rem;
+    max-width: 48rem;
+    padding-block: clamp(2.5rem, 8vw, 5rem) 2rem;
   }
 
-  h1 {
-    font-size: clamp(2rem, 5.5vw, 3rem);
-    letter-spacing: -0.03em;
+  .page :global(.nf-title) {
+    --title-size: clamp(2rem, 5.5vw, 3rem);
+    --title-tracking: -0.03em;
+  }
+
+  .lookup {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .ruler,
+  .end {
+    stroke: var(--text-subtle);
+    stroke-width: 1.5;
+  }
+
+  .stop polygon {
+    fill: var(--bg);
+    stroke: var(--line-strong);
+    stroke-width: 1.5;
+  }
+
+  .stop text {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    fill: var(--text-subtle);
+  }
+
+  .stop .miss {
+    fill: var(--error);
+  }
+
+  .signal polygon {
+    fill: var(--data);
   }
 
   .trace {
@@ -57,5 +125,70 @@ import { href } from '../lib/paths';
 
   .lede {
     color: var(--muted);
+  }
+
+  /* Reduced motion: the empty line, no signal, every lookup already marked. */
+  .signal {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* 0–2.4s: travel at constant speed; each stop answers as the signal passes it.
+       2.4–2.9s: reach the end, hesitate; 2.9–3.5s: fall, accelerating. */
+    .signal {
+      opacity: 1;
+      animation: seek 3.5s both;
+    }
+
+    .stop polygon {
+      animation: stop-check 700ms var(--ease-ui) both;
+      animation-delay: var(--at);
+    }
+
+    .stop .miss {
+      animation: miss-in 240ms var(--ease-out) both;
+      animation-delay: calc(var(--at) + 0.15s);
+    }
+  }
+
+  @keyframes seek {
+    0% {
+      translate: 0 0;
+      animation-timing-function: linear;
+    }
+    68% {
+      translate: 640px 0;
+      animation-timing-function: var(--ease-out);
+    }
+    80% {
+      translate: 662px 0;
+      rotate: 0deg;
+      animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+    }
+    100% {
+      translate: 700px 150px;
+      rotate: 90deg;
+      opacity: 0;
+    }
+  }
+
+  @keyframes stop-check {
+    0% {
+      stroke: var(--data);
+      fill: var(--data);
+    }
+    100% {
+      stroke: var(--line-strong);
+      fill: var(--bg);
+    }
+  }
+
+  @keyframes miss-in {
+    from {
+      opacity: 0;
+      translate: 0 -6px;
+    }
   }
 </style>

@@ -1,0 +1,155 @@
+---
+// The page signature: the homepage hero's motion at page scale. A mono kicker types in,
+// the title opens piece by piece from the left (letters for short titles, words for long
+// ones), a rule draws under it at constant speed and the accent node lands at its end.
+// Everything plays once on load; with reduced motion, or when the title arrived by a
+// shared-element morph from the previous page, it is simply there.
+interface Props {
+  text: string;
+  kicker?: string;
+  /** Heading level; pages use h1. */
+  as?: 'h1' | 'h2';
+  /** Show the rule and node under the title. */
+  rule?: boolean;
+  class?: string;
+  /** Marks this heading as the landing target of a title morph (see BaseLayout). */
+  morph?: boolean;
+  /** Extra attributes for the heading (ids, data hooks). */
+  attrs?: Record<string, string | boolean | undefined>;
+}
+
+const { text, kicker, as: Tag = 'h1', rule = true, class: className, morph = true, attrs = {} } = Astro.props;
+const letters = text.length <= 14;
+const pieces = letters ? [...text] : text.split(' ');
+// Keep the whole reveal under ~0.7s however long the title is.
+const step = Math.min(letters ? 42 : 55, Math.round(640 / Math.max(1, pieces.length)));
+---
+
+<div class:list={['signal-title', className]} style={`--step:${step}ms; --count:${pieces.length}`}>
+  {
+    kicker && (
+      <p class="meta kicker" style={`--chars:${kicker.length}`}>
+        {kicker}
+      </p>
+    )
+  }
+  <Tag class:list={['title', letters ? 'letters' : 'words']} aria-label={letters ? text : undefined} data-vt-title={morph ? '' : undefined} {...attrs}>
+    {
+      pieces.map((piece, i) => (
+        <span class="piece" style={`--i:${i}`} aria-hidden={letters ? 'true' : undefined}>{piece === ' ' ? ' ' : piece}</span>
+      ))
+    }
+  </Tag>
+  {
+    rule && (
+      <span class="title-rule" aria-hidden="true">
+        <span class="node" />
+      </span>
+    )
+  }
+</div>
+
+<style>
+  .signal-title {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .kicker {
+    width: fit-content;
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--title-size, clamp(2.2rem, 6vw, 3.4rem));
+    font-weight: 600;
+    letter-spacing: var(--title-tracking, -0.035em);
+    line-height: 1.05;
+    /* Flex drops the whitespace between pieces; words get their space back as a gap. */
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .words {
+    column-gap: 0.26em;
+  }
+
+
+  .title-rule {
+    position: relative;
+    display: block;
+    height: 1px;
+    margin-top: 0.9rem;
+    background: var(--text-subtle);
+    transform-origin: left;
+  }
+
+  .node {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    margin: -4.5px -4.5px 0 0;
+    background: var(--accent);
+    rotate: 45deg;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* Kicker: typed at constant speed, one mono character per step. */
+    .kicker {
+      animation: type-in calc(var(--chars) * 28ms) steps(var(--chars), end) both;
+    }
+
+    .piece {
+      animation: piece-open 620ms var(--ease-out) both;
+      animation-delay: calc(140ms + var(--i) * var(--step));
+    }
+
+    .title-rule {
+      animation: rule-draw 760ms linear both;
+      animation-delay: calc(200ms + var(--count) * var(--step) * 0.5);
+    }
+
+    .node {
+      animation: node-land var(--dur-ui) var(--ease-out) both;
+      animation-delay: calc(940ms + var(--count) * var(--step) * 0.5);
+    }
+
+    /* Arrived by a title morph: the title is already in place. */
+    :global(html.vt-morph) .piece {
+      animation: none;
+    }
+  }
+
+  @keyframes type-in {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes piece-open {
+    from {
+      clip-path: inset(0 100% 0 0);
+      translate: 0 0.14em;
+    }
+    to {
+      clip-path: inset(-0.2em -0.2em -0.2em 0);
+    }
+  }
+
+  @keyframes rule-draw {
+    from {
+      transform: scaleX(0);
+    }
+  }
+
+  @keyframes node-land {
+    from {
+      scale: 0;
+    }
+  }
+</style>

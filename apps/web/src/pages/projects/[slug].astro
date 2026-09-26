@@ -2,6 +2,7 @@
 import { ArrowLeft, ExternalLink } from '@lucide/astro';
 import { render } from 'astro:content';
 import KeshavMark from '../../components/brand/KeshavMark.astro';
+import SignalTitle from '../../components/SignalTitle.astro';
 import MetricValue from '../../components/MetricValue.astro';
 import MotionFigure from '../../components/MotionFigure.astro';
 import Toc from '../../components/Toc.astro';
@@ -37,23 +38,6 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
 ---
 
 <BaseLayout title={data.title} description={data.description} ogImage={`projects/${data.slug}`}>
-  <script is:inline slot="head">
-    // Cross-document view transition: the next-project title morphs into the next page's heading.
-    addEventListener('pageswap', (event) => {
-      const link = document.querySelector('[data-next-link]');
-      if (event.viewTransition && link && event.activation?.entry?.url === link.href) {
-        link.querySelector('[data-next-title]').style.viewTransitionName = 'project-title';
-      }
-    });
-    addEventListener('pagereveal', (event) => {
-      const from = window.navigation?.activation?.from?.url ?? '';
-      if (!event.viewTransition || !from.includes('/projects/')) return;
-      const title = document.querySelector('[data-project-title]');
-      if (!title) return;
-      title.style.viewTransitionName = 'project-title';
-      event.viewTransition.finished.finally(() => (title.style.viewTransitionName = ''));
-    });
-  </script>
   <article class="container-page project">
     <header class="head">
       <a class="back meta" href={href(data.category === 'professional' ? '/work' : '/projects')}>
@@ -63,7 +47,7 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
       <p class="category with-mark" data-category={data.category}>
         <KeshavMark size={14} accent={data.category === 'professional'} />{categoryLabel}
       </p>
-      <h1 data-project-title>{data.title}</h1>
+      <SignalTitle text={data.title} class="case-title" attrs={{ "data-project-title": true }} />
       <p class="description">{data.description}</p>
     </header>
 
@@ -192,7 +176,7 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
                 {shared.length > 0 && <span class="shared"> · shares {shared.join(', ')}</span>}
               </span>
               <a href={href(`/projects/${next.data.slug}`)} data-next-link>
-                <span data-next-title>{next.data.title}</span> →
+                <span data-next-title data-vt-title>{next.data.title}</span> →
               </a>
             </nav>
           )
@@ -261,10 +245,9 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
     content: none;
   }
 
-  h1 {
+  .head :global(.case-title) {
+    --title-size: clamp(2.2rem, 6vw, 3.4rem);
     margin-top: 0.75rem;
-    font-size: clamp(2.2rem, 6vw, 3.4rem);
-    letter-spacing: -0.035em;
   }
 
   .description {

@@ -135,7 +135,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     <p class="intro">
       Chosen because each shows a different kind of problem — not a ranking.
     </p>
-    <div class="cards">
+    <div class="cards" data-stagger>
       {featured.map((project, i) => <ProjectCard project={project} index={i + 1} preview />)}
     </div>
   </section>

@@ -1,0 +1,83 @@
+/*
+ * Site-wide motion: page transitions, list staggers and the header that stays put.
+ * Every animation here plays once per navigation or reveal, and all of it is off under
+ * prefers-reduced-motion (global.css also disables cross-document transitions there).
+ */
+
+/* The header is its own transition layer, so it holds still while pages change under it.
+   A theme change is one layer (the radial wipe in ThemeToggle), so it opts out there. */
+.site-header {
+  view-transition-name: site-header;
+}
+
+html.theme-transitioning .site-header {
+  view-transition-name: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Page to page: the old page recedes a little while the new one is wiped in from the
+     top edge, like the next sheet on a drawing board. Structural easing, not a crossfade. */
+  html:not(.theme-transitioning)::view-transition-old(root) {
+    animation: page-out 280ms var(--ease-ui) both;
+  }
+
+  html:not(.theme-transitioning)::view-transition-new(root) {
+    animation: page-in 520ms var(--ease-out) both;
+  }
+
+  ::view-transition-group(site-header) {
+    animation-duration: 0s;
+  }
+
+  /* A title that morphs from the link that was clicked into the new page's heading. */
+  ::view-transition-group(page-title) {
+    animation-duration: 460ms;
+    animation-timing-function: var(--ease-out);
+  }
+
+  ::view-transition-old(page-title),
+  ::view-transition-new(page-title) {
+    animation-duration: 460ms;
+    height: 100%;
+    object-fit: none;
+    object-position: left top;
+  }
+
+  /* Staggered entrances: children of [data-stagger] arrive in order once revealed. The
+     index (--i) is set by BaseLayout, so no markup needs to count. */
+  .js [data-stagger]:not(.is-revealed) > * {
+    opacity: 0;
+    /* Same safety net as [data-reveal]: shown anyway if the observer never fires. */
+    animation: reveal-fallback 0s 2.5s forwards;
+  }
+
+  /* Keyframes rather than transitions, so the children keep their own hover transitions. */
+  .js [data-stagger].is-revealed > * {
+    animation: stagger-in 440ms var(--ease-out) both;
+    animation-delay: calc(min(var(--i, 0), 8) * 60ms);
+  }
+}
+
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+    translate: 0 -12px;
+  }
+}
+
+@keyframes page-in {
+  from {
+    clip-path: inset(0 0 100% 0);
+    translate: 0 16px;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}

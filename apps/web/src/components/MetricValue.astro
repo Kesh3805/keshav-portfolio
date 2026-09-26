@@ -1,6 +1,10 @@
 ---
 // Renders a metric value. "before → after" values become a large result with
 // the baseline shown small and struck through, so the change reads at a glance.
+//
+// Digits roll like an odometer to their value when the metric scrolls into view
+// (BaseLayout adds .is-rolled). The resting state is always the exact documented
+// figure; screen readers get the plain text, and reduced motion skips the roll.
 interface Props {
   value: string;
   size?: 'md' | 'lg';
@@ -9,20 +13,38 @@ interface Props {
 const { value, size = 'md' } = Astro.props;
 const [before, after] = value.split(/\s*→\s*/);
 const isDelta = after !== undefined;
+const result = isDelta ? after! : value;
+let digit = 0;
+const chars = [...result].map((ch) => ({ ch, d: /\d/.test(ch) ? Number(ch) : null, k: /\d/.test(ch) ? digit++ : 0 }));
 ---
 
-<span class:list={['metric-value', size]}>
+<span class:list={['metric-value', size]} data-roll>
+  <span class="result">
+    <span class="sr-only">{result}</span>
+    <span class="roll" aria-hidden="true">
+      {
+        chars.map(({ ch, d, k }) =>
+          d === null ? (
+            <span class="cell glyph">{ch}</span>
+          ) : (
+            <span class="cell odo" style={`--d:${d}; --k:${k}`}>
+              <span class="strip">
+                {Array.from({ length: 10 }, (_, n) => (
+                  <span>{n}</span>
+                ))}
+              </span>
+            </span>
+          ),
+        )
+      }
+    </span>
+  </span>
   {
-    isDelta ? (
-      <>
-        <span class="result">{after}</span>
-        <span class="baseline">
-          <span class="sr-only">from </span>
-          <s>{before}</s>
-        </span>
-      </>
-    ) : (
-      <span class="result">{value}</span>
+    isDelta && (
+      <span class="baseline">
+        <span class="sr-only">from </span>
+        <s>{before}</s>
+      </span>
     )
   }
 </span>
@@ -50,6 +72,48 @@ const isDelta = after !== undefined;
 
   .lg .result {
     font-size: clamp(1.6rem, 2.6vw, 1.95rem);
+  }
+
+  .roll {
+    display: inline-flex;
+  }
+
+  /* Every character sits in a cell of the same height, so digits and symbols share a baseline. */
+  .cell {
+    display: inline-block;
+    height: 1.15em;
+    line-height: 1.15em;
+  }
+
+  /* Only symbol cells keep their spaces ("3,668 / 434"); a digit cell must not, or the
+     markup's own newline would push its strip down a row. */
+  .glyph {
+    white-space: pre;
+  }
+
+  .odo {
+    overflow: hidden;
+  }
+
+  .strip {
+    display: flex;
+    flex-direction: column;
+    transform: translateY(calc(var(--d) * -1.15em));
+  }
+
+  .strip > span {
+    height: 1.15em;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.js) [data-roll]:not(:global(.is-rolled)) .strip {
+      transform: translateY(0);
+    }
+
+    .strip {
+      transition: transform 900ms cubic-bezier(0.2, 0.75, 0.1, 1);
+      transition-delay: calc(var(--k) * 50ms);
+    }
   }
 
   .baseline {

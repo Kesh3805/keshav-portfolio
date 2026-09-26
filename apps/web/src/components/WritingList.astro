@@ -10,7 +10,7 @@ interface Props {
 const { articles, headingLevel: Heading = 'h3' } = Astro.props;
 ---
 
-<ol class="writing">
+<ol class="writing" data-stagger>
   {
     articles.map((article) => (
       <li>
@@ -19,7 +19,7 @@ const { articles, headingLevel: Heading = 'h3' } = Astro.props;
         </time>
         <div>
           <Heading class="title">
-            <a href={href(`/writing/${article.data.slug}`)}>{article.data.title}</a>
+            <a href={href(`/writing/${article.data.slug}`)}><span data-vt-title>{article.data.title}</span></a>
           </Heading>
           <p>{article.data.description}</p>
         </div>
@@ -44,6 +44,30 @@ const { articles, headingLevel: Heading = 'h3' } = Astro.props;
     gap: 0.5rem 2rem;
     padding-block: 1.35rem;
     border-bottom: 1px solid var(--line);
+  }
+
+  /* Hover: a data signal traces the row's rule left to right, at constant speed. */
+  .writing > li::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 -1px;
+    height: 1px;
+    background: var(--data);
+    transform: scaleX(0);
+    transform-origin: left;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .writing > li::after {
+      transition: transform 160ms var(--ease-ui);
+    }
+
+    .writing > li:hover::after,
+    .writing > li:focus-within::after {
+      transform: scaleX(1);
+      transition: transform 620ms linear;
+    }
   }
 
   @media (min-width: 52rem) {

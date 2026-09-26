@@ -6,6 +6,7 @@ import '@fontsource/ibm-plex-sans/400-italic.css';
 import '@fontsource/ibm-plex-sans/500.css';
 import '@fontsource/ibm-plex-sans/600.css';
 import '../styles/global.css';
+import '../styles/motion.css';
 import ContentScripts from '../components/ContentScripts.astro';
 import SearchPalette from '../components/SearchPalette.astro';
 import Seo, { type Props as SeoProps } from '../components/Seo.astro';
@@ -32,6 +33,40 @@ export type Props = SeoProps;
     <link rel="apple-touch-icon" href={href('/apple-touch-icon.png')} />
     <link rel="manifest" href={href('/site.webmanifest')} />
     <Seo {...Astro.props} />
+    <script is:inline>
+      // Title morph across pages: the clicked link's title becomes the next page's heading.
+      // Inline in <head> because pagereveal can fire before deferred scripts run.
+      addEventListener('pageswap', (event) => {
+        const url = event.activation?.entry?.url;
+        if (!event.viewTransition || !url) return;
+        const link = [...document.querySelectorAll('a[href]')].find(
+          (a) => a.href === url && a.querySelector('[data-vt-title]'),
+        );
+        const title = link?.querySelector('[data-vt-title]');
+        if (!title) return;
+        title.style.viewTransitionName = 'page-title';
+        try {
+          sessionStorage.setItem('vt-morph', url);
+        } catch {
+          /* storage blocked: no morph, the page still transitions */
+        }
+      });
+      addEventListener('pagereveal', (event) => {
+        let target = null;
+        try {
+          target = sessionStorage.getItem('vt-morph');
+          sessionStorage.removeItem('vt-morph');
+        } catch {
+          /* storage blocked */
+        }
+        if (!event.viewTransition || target !== location.href) return;
+        const heading = document.querySelector('h1[data-vt-title]');
+        if (!heading) return;
+        document.documentElement.classList.add('vt-morph');
+        heading.style.viewTransitionName = 'page-title';
+        event.viewTransition.finished.finally(() => (heading.style.viewTransitionName = ''));
+      });
+    </script>
     <slot name="head" />
   </head>
   <body>
@@ -43,15 +78,22 @@ export type Props = SeoProps;
     <SearchPalette />
     <ContentScripts />
     <script>
-      // Section reveals: each [data-reveal] block fades up once as it enters the viewport.
-      const blocks = document.querySelectorAll('[data-reveal]');
+      // Reveals, once per element as it enters the viewport:
+      //   [data-reveal]  the block fades up
+      //   [data-stagger] its children arrive in order (index set here as --i)
+      //   [data-roll]    metric digits roll to their value
+      for (const list of document.querySelectorAll<HTMLElement>('[data-stagger]')) {
+        [...list.children].forEach((child, i) => (child as HTMLElement).style.setProperty('--i', String(i)));
+      }
+      const blocks = document.querySelectorAll('[data-reveal], [data-stagger], [data-roll]');
       if (blocks.length) {
         const io = new IntersectionObserver(
           (entries) => {
             for (const entry of entries) {
               if (!entry.isIntersecting) continue;
-              entry.target.classList.add('is-revealed');
-              io.unobserve(entry.target);
+              const el = entry.target;
+              el.classList.add(el.hasAttribute('data-roll') ? 'is-rolled' : 'is-revealed');
+              io.unobserve(el);
             }
           },
           { rootMargin: '0px 0px -6% 0px' },

@@ -1,4 +1,5 @@
 ---
+import SignalTitle from '../../components/SignalTitle.astro';
 import ProjectCard from '../../components/ProjectCard.astro';
 import WritingList from '../../components/WritingList.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
@@ -34,7 +35,7 @@ const { tag, projects, articles } = Astro.props;
   <div class="container-page page">
     <header>
       <p class="meta"><a class="link" href={href('/writing')}>Writing</a> / topic</p>
-      <h1>#{tag}</h1>
+      <SignalTitle text={`#${tag}`} class="mono-title" />
     </header>
 
     {
@@ -54,7 +55,7 @@ const { tag, projects, articles } = Astro.props;
           <h2 class="section-label" id="tag-projects">
             Projects · {projects.length}
           </h2>
-          <div class="cards">
+          <div class="cards" data-stagger>
             {projects.map((project) => <ProjectCard project={project} />)}
           </div>
         </section>
@@ -68,6 +69,16 @@ const { tag, projects, articles } = Astro.props;
     display: grid;
     gap: 3rem;
     padding-top: clamp(2rem, 6vw, 4rem);
+  }
+
+  .page :global(.mono-title) {
+    --title-size: clamp(2rem, 5vw, 3rem);
+    --title-tracking: 0;
+  }
+
+  .page :global(.mono-title .title) {
+    font-family: var(--font-mono);
+    font-weight: 500;
   }
 
   h1 {

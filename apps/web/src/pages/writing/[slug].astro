@@ -2,6 +2,7 @@
 import { ArrowLeft } from '@lucide/astro';
 import { render } from 'astro:content';
 import KeshavMark from '../../components/brand/KeshavMark.astro';
+import SignalTitle from '../../components/SignalTitle.astro';
 import ProjectCard from '../../components/ProjectCard.astro';
 import ReadingProgress from '../../components/ReadingProgress.astro';
 import Toc from '../../components/Toc.astro';
@@ -63,7 +64,7 @@ const minutes = Math.max(1, Math.round(words / 220));
         <span>{minutes} min read</span>
         {data.draft && <span class="draft">draft</span>}
       </p>
-      <h1>{data.title}</h1>
+      <SignalTitle text={data.title} class="article-title" />
       <p class="description">{data.description}</p>
       <ul class="tags" aria-label="Tags">
         {
@@ -91,7 +92,7 @@ const minutes = Math.max(1, Math.round(words / 220));
 
     <section class="related" aria-labelledby="from-project">
       <h2 class="section-label" id="from-project">From the project</h2>
-      <div class="cards">
+      <div class="cards" data-stagger>
         {projects.map((project) => <ProjectCard project={project} />)}
       </div>
     </section>
@@ -134,10 +135,10 @@ const minutes = Math.max(1, Math.round(words / 220));
     color: var(--error);
   }
 
-  h1 {
+  .head :global(.article-title) {
+    --title-size: clamp(2rem, 5.5vw, 3.1rem);
+    --title-tracking: -0.03em;
     margin-top: 0.9rem;
-    font-size: clamp(2rem, 5.5vw, 3.1rem);
-    letter-spacing: -0.03em;
   }
 
   .description {

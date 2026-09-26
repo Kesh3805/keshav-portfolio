@@ -1,4 +1,5 @@
 ---
+import SignalTitle from '../../components/SignalTitle.astro';
 import WritingList from '../../components/WritingList.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getArticles, tagSlug } from '../../lib/content';
@@ -14,8 +15,7 @@ const tags = [...new Set(articles.flatMap((a) => a.data.tags))].sort();
 >
   <div class="container-page page">
     <header>
-      <p class="meta">Notebook</p>
-      <h1>Writing</h1>
+      <SignalTitle kicker="Notebook" text="Writing" />
       <p class="lede">
         Each piece starts from something that happened in a system I worked on: what broke or was
         slow, what constrained the fix, and what I would keep from it.
@@ -46,11 +46,6 @@ const tags = [...new Set(articles.flatMap((a) => a.data.tags))].sort();
     padding-top: clamp(2rem, 6vw, 4rem);
   }
 
-  h1 {
-    margin-top: 0.5rem;
-    font-size: clamp(2.2rem, 6vw, 3.4rem);
-    letter-spacing: -0.035em;
-  }
 
   .lede {
     margin-top: 1rem;
