@@ -107,3 +107,25 @@ Timelines are authored on a 30 fps, 16 s story clock (`storyScale` in `packages/
 5. Restore: the original value hashes to the anchored value again — MATCH.
 
 **Grounding.** `content/projects/dhvvs.md` (proof chain, "Once on-chain, no database admin can retroactively alter it", "Anchor a hash, not the record"). The hash check illustrates that property; field values and hashes are illustrative.
+
+---
+
+## SystemsHeroFilm
+
+**Format.** 1920×1080, 60 fps, 34 s (2040 frames), dark and light. Authored at 1280×720 logical units on the shared story clock and rendered at 1.5×. Offered on the homepage as a user-initiated, silent film in a dialog; the homepage never loads it until asked.
+
+**Concept.** Four systems on one plane. The camera moves from one to the next, then pulls back until they share the frame and resolve into the homepage topology.
+
+**Acts** (story frames; `sec(s) = s × 40`).
+
+| Act                                         | Time    | System                                                                                                                                                                                                                                                                                | Source                                                 |
+| ------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| I · High-concurrency edge                   | 0–7 s   | Two scans, one unit, a Redis lock: one redemption, one rejection that re-reads 0                                                                                                                                                                                                      | `questqr.md`, `motion.json`                            |
+| II · Asynchronous document pipeline         | 7–14 s  | Invoice guard → GCS → LlamaIndex Cloud → signed webhook (signature verified) → result mapping → BullMQ → core service → ledger (PostgreSQL, Decimal.js)                                                                                                                               | `fintax.md`                                            |
+| III · Reconciliation, then a read model     | 14–22 s | M9 over purchase books, IMS and GSTR-2B with the five documented states; then per-read assembly (3,000ms+) vs the returns status projection (<15ms at peak load)                                                                                                                      | `fintax.md`, `gst-returns-read-model.mdx`              |
+| IV · Deterministic memory · isolated review | 22–29 s | BARA: behavior_engine → topic_threading → policy.py (41 gates); an acknowledgement retrieves nothing, a message that refers back opens research + episodic. Antigravity: temporary worktree, five passes, evidence gate drops an unanchored finding, worktree removed, main untouched | `bara.md`, `motion.json`, `antigravity-pr-reviewer.md` |
+| V · Convergence                             | 29–34 s | Pull-back; each act's panel lights with the topology nodes it corresponds to (`CONVERGES_TO`), then the site's own topology settles beside the homepage headline                                                                                                                      | `apps/web/src/lib/topology.ts`, `site.config.ts`       |
+
+**Grounding rulings.** Not shown because the source does not document them: a Redis `SET … NX PX` command or campaign IDs, HMAC or header names, a "private" bucket, RRF or reranking for BARA, automatic approval, processing-time figures, and repository / PR / vulnerability counts. The Antigravity cluster does not join the topology: review tooling has no node in the runtime architecture. `apps/web/tests/hero-film.test.ts` enforces these rules against the composition source.
+
+**Structure.** `compositions/SystemsHeroFilm.tsx` (camera, headers, captions) and `compositions/hero/` (`timeline.ts`, one component per act, `ActPreview.tsx`). Acts I–IV are also registered on their own under the `hero-acts` Studio folder for review; they are not rendered by `scripts/render.mjs`.

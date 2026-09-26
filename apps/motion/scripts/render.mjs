@@ -34,6 +34,7 @@ const OUTPUTS = {
   AntigravityReviewPipeline: 'antigravity-review-pipeline',
   AcfsForensicReport: 'acfs-forensic-report',
   DhvvsProofChain: 'dhvvs-proof-chain',
+  SystemsHeroFilm: 'systems-hero-film',
 };
 const COMPOSITIONS = Object.keys(OUTPUTS);
 const fileName = (id) => OUTPUTS[id];

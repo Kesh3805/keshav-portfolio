@@ -23,7 +23,7 @@ import {
 } from 'remotion';
 
 export type Pt = { x: number; y: number };
-export type Tone = 'default' | 'accent' | 'data' | 'ok' | 'error' | 'dim';
+export type Tone = 'default' | 'accent' | 'data' | 'ok' | 'warning' | 'error' | 'dim';
 
 // ─── Theme ────────────────────────────────────────────────────────────────
 
@@ -56,6 +56,7 @@ const toneColor = (colors: Palette): Record<Tone, string> => ({
   accent: colors.accent,
   data: colors.data,
   ok: colors.ok,
+  warning: colors.warning,
   error: colors.error,
   dim: colors.line,
 });
@@ -113,6 +114,55 @@ function useExit(at: number | undefined, duration: number = durations.captionFad
 
 // ─── Stage ────────────────────────────────────────────────────────────────
 
+/** Shared SVG definitions: grid patterns, the two bloom filters and the vignette. */
+export function StageDefs() {
+  const colors = useColors();
+  const glow = useGlow();
+  return (
+    <defs>
+      <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+        <path d="M 32 0 L 0 0 0 32" fill="none" stroke={colors.grid} strokeWidth="1" />
+      </pattern>
+      <pattern id="grid-fine" width="8" height="8" patternUnits="userSpaceOnUse">
+        <path d="M 8 0 L 0 0 0 8" fill="none" stroke={colors.grid} strokeWidth="0.75" />
+      </pattern>
+      {/* Phosphor bloom: a blurred copy of the source merged under the original. */}
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur" />
+        <feColorMatrix
+          in="blur"
+          type="matrix"
+          values={`1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${1.6 * glow} 0`}
+          result="bloom"
+        />
+        <feMerge>
+          <feMergeNode in="bloom" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+      <filter id="glow-strong" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="wide" />
+        <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="tight" />
+        <feColorMatrix
+          in="wide"
+          type="matrix"
+          values={`1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${1.4 * glow} 0`}
+          result="wideBloom"
+        />
+        <feMerge>
+          <feMergeNode in="wideBloom" />
+          <feMergeNode in="tight" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+      <radialGradient id="vignette" cx="50%" cy="45%" r="75%">
+        <stop offset="60%" stopColor={colors.bg} stopOpacity="0" />
+        <stop offset="100%" stopColor={colors.bg} stopOpacity={0.7 * glow} />
+      </radialGradient>
+    </defs>
+  );
+}
+
 export function Stage({
   figure,
   title,
@@ -123,7 +173,6 @@ export function Stage({
   children: ReactNode;
 }) {
   const colors = useColors();
-  const glow = useGlow();
   const intro = useProgress(0, 20);
   return (
     <AbsoluteFill style={{ backgroundColor: colors.bg, fontFamily: typography.sans }}>
@@ -132,47 +181,7 @@ export function Stage({
         height={canvas.height}
         viewBox={`0 0 ${canvas.width} ${canvas.height}`}
       >
-        <defs>
-          <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
-            <path d="M 32 0 L 0 0 0 32" fill="none" stroke={colors.grid} strokeWidth="1" />
-          </pattern>
-          <pattern id="grid-fine" width="8" height="8" patternUnits="userSpaceOnUse">
-            <path d="M 8 0 L 0 0 0 8" fill="none" stroke={colors.grid} strokeWidth="0.75" />
-          </pattern>
-          {/* Phosphor bloom: a blurred copy of the source merged under the original. */}
-          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur" />
-            <feColorMatrix
-              in="blur"
-              type="matrix"
-              values={`1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${1.6 * glow} 0`}
-              result="bloom"
-            />
-            <feMerge>
-              <feMergeNode in="bloom" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id="glow-strong" x="-100%" y="-100%" width="300%" height="300%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="wide" />
-            <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="tight" />
-            <feColorMatrix
-              in="wide"
-              type="matrix"
-              values={`1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${1.4 * glow} 0`}
-              result="wideBloom"
-            />
-            <feMerge>
-              <feMergeNode in="wideBloom" />
-              <feMergeNode in="tight" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <radialGradient id="vignette" cx="50%" cy="45%" r="75%">
-            <stop offset="60%" stopColor={colors.bg} stopOpacity="0" />
-            <stop offset="100%" stopColor={colors.bg} stopOpacity={0.7 * glow} />
-          </radialGradient>
-        </defs>
+        <StageDefs />
         <rect width="100%" height="100%" fill="url(#grid)" />
         <g opacity={intro}>
           <text

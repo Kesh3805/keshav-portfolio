@@ -74,5 +74,19 @@
       "If a field is edited afterwards, the record's hash no longer matches the anchored hash.",
       "Restoring the original record makes the hashes match again."
     ]
+  },
+  {
+    "id": "systems-hero-film",
+    "title": "Systems film — four systems, one architecture",
+    "takeaway": "Concurrency control, an asynchronous document pipeline, reconciliation with a read model, and gated retrieval beside isolated review — each a part of one architecture.",
+    "steps": [
+      "Dynamic QR platform: two scans reach the same campaign line with one unit left. A Redis lock makes the decrement atomic; one scan redeems, the other re-reads 0 and is rejected.",
+      "GST platform: an invoice passes the invoice guard, lands in GCS and goes to LlamaIndex Cloud; the signed webhook is verified, the result is mapped and handed to the core service through BullMQ, and structured data reaches the ledger in PostgreSQL.",
+      "M9 reconciliation matches purchase books against IMS and GSTR-2B and classifies each document as EXACT, MISMATCH, MISSING_IN_2B, MISSING_IN_BOOKS or DRIFT; the result is delivered over SSE.",
+      "Return status was assembled on every read (3,000ms+); GSTR-1 and GSTR-3B writers now keep a precomputed projection fresh, and the read takes under 15ms at peak load.",
+      "BARA classifies each message first; 41 deterministic gates decide whether to retrieve. An acknowledgement retrieves nothing; a message that refers back opens only the research and episodic tiers.",
+      "Antigravity reviews a pull request in a temporary worktree; a finding without a diff line is dropped, the worktree is removed, and the main branch is never touched.",
+      "The systems resolve into the architecture on the homepage: Redis, BullMQ and workers, the AI pipeline, PostgreSQL, the NestJS API, SSE and pgvector memory."
+    ]
   }
 ]

@@ -1,5 +1,5 @@
 import { canvas, fps, outputFrames } from '@keshav/motion-tokens';
-import { Composition } from 'remotion';
+import { Composition, Folder } from 'remotion';
 import './fonts';
 import { themed } from './primitives';
 import {
@@ -14,6 +14,18 @@ import {
 import { AcfsForensicReport, ACFS_DURATION } from './compositions/AcfsForensicReport';
 import { DhvvsProofChain, DHVVS_DURATION } from './compositions/DhvvsProofChain';
 import { QrRedemptionFlow, QR_REDEMPTION_DURATION } from './compositions/QrRedemptionFlow';
+import {
+  HERO_HEIGHT,
+  HERO_WIDTH,
+  SystemsHeroFilm,
+  SYSTEMS_HERO_DURATION,
+} from './compositions/SystemsHeroFilm';
+import { Act1ConcurrencyLock } from './compositions/hero/Act1ConcurrencyLock';
+import { Act2DocumentAiPipeline } from './compositions/hero/Act2DocumentAiPipeline';
+import { Act3M9Reconciliation } from './compositions/hero/Act3M9Reconciliation';
+import { Act4MemoryAndSandbox } from './compositions/hero/Act4MemoryAndSandbox';
+import { actPreview } from './compositions/hero/ActPreview';
+import { ACTS } from './compositions/hero/timeline';
 
 // Output filenames for each id are mapped in scripts/render.mjs. The `theme`
 // input prop selects the palette; Studio previews dark by default.
@@ -50,6 +62,14 @@ export const compositions = [
   },
 ] as const;
 
+// Each hero act on its own, from frame 0, for review in Studio. Not part of the render map.
+const heroActs = [
+  { id: 'HeroAct1Concurrency', act: Act1ConcurrencyLock, span: ACTS.concurrency },
+  { id: 'HeroAct2Pipeline', act: Act2DocumentAiPipeline, span: ACTS.pipeline },
+  { id: 'HeroAct3Reconciliation', act: Act3M9Reconciliation, span: ACTS.reconciliation },
+  { id: 'HeroAct4Review', act: Act4MemoryAndSandbox, span: ACTS.review },
+] as const;
+
 export function Root() {
   return (
     <>
@@ -65,6 +85,29 @@ export function Root() {
           height={canvas.height}
         />
       ))}
+      <Composition
+        id="SystemsHeroFilm"
+        component={themed(SystemsHeroFilm)}
+        defaultProps={{ theme: 'dark' as const }}
+        durationInFrames={outputFrames(SYSTEMS_HERO_DURATION)}
+        fps={fps}
+        width={HERO_WIDTH}
+        height={HERO_HEIGHT}
+      />
+      <Folder name="hero-acts">
+        {heroActs.map(({ id, act, span }) => (
+          <Composition
+            key={id}
+            id={id}
+            component={themed(actPreview(act))}
+            defaultProps={{ theme: 'dark' as const }}
+            durationInFrames={outputFrames(span.end - span.start)}
+            fps={fps}
+            width={HERO_WIDTH}
+            height={HERO_HEIGHT}
+          />
+        ))}
+      </Folder>
     </>
   );
 }
