@@ -48,8 +48,8 @@ const multi = media.length > 1;
               height="1080"
               aria-describedby="film-steps"
             >
-              {v.webm && <source src={v.webm} type="video/webm" />}
               {v.mp4 && <source src={v.mp4} type="video/mp4" />}
+              {v.webm && <source src={v.webm} type="video/webm" />}
             </video>
           ))}
           {media.map((v) =>
@@ -83,7 +83,11 @@ const multi = media.length > 1;
     const steps = root.querySelector<HTMLDetailsElement>('[data-film-steps]')!;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const videos = () => [...dialog.querySelectorAll<HTMLVideoElement>('video')];
-    const visible = () => videos().find((v) => v.offsetParent !== null);
+    const activeTheme = () => document.documentElement.dataset.theme || 'dark';
+    const visible = () =>
+      videos().find((v) => v.dataset.variant === activeTheme()) ??
+      videos().find((v) => v.offsetParent !== null) ??
+      videos()[0];
 
     const open = () => {
       // Posters are attached on open: a poster attribute is fetched eagerly, even in a closed dialog.
@@ -91,7 +95,10 @@ const multi = media.length > 1;
       dialog.classList.toggle('is-static', reduced.matches);
       steps.open = reduced.matches;
       dialog.showModal();
-      if (!reduced.matches) void visible()?.play().catch(() => {});
+      if (!reduced.matches) {
+        const v = visible();
+        if (v) void v.play().catch(() => {});
+      }
     };
     const close = () => dialog.close();
 
@@ -99,8 +106,40 @@ const multi = media.length > 1;
     root.querySelector('[data-film-close]')!.addEventListener('click', close);
     root.querySelector('[data-film-anyway]')!.addEventListener('click', () => {
       dialog.classList.remove('is-static');
-      void visible()?.play().catch(() => {});
+      const v = visible();
+      if (v) void v.play().catch(() => {});
     });
+
+    // Theme change: transfer playback position to the new theme's video
+    document.addEventListener('themechange', () => {
+      if (!dialog.open) return;
+      const current = visible();
+      if (!current) return;
+      const others = videos().filter((v) => v !== current);
+      const prev = others.find((v) => !v.paused || v.currentTime > 0);
+      if (prev) {
+        current.currentTime = prev.currentTime;
+        prev.pause();
+      }
+      if (!dialog.classList.contains('is-static')) {
+        void current.play().catch(() => {});
+      }
+    });
+
+    // Fallback: if a media source fails decode or load, switch to alternative source
+    for (const v of videos()) {
+      v.addEventListener('error', () => {
+        const sources = [...v.querySelectorAll<HTMLSourceElement>('source')];
+        const current = v.currentSrc;
+        const alt = sources.find((s) => s.src !== current);
+        if (alt && v.src !== alt.src) {
+          v.src = alt.src;
+          v.load();
+          void v.play().catch(() => {});
+        }
+      });
+    }
+
     // Closing (button, Escape or backdrop) always stops playback.
     dialog.addEventListener('close', () => videos().forEach((v) => v.pause()));
     dialog.addEventListener('click', (event) => {
