@@ -1,7 +1,7 @@
 ---
 title: How I Built a PR Reviewer That Cannot Modify the Main Branch
 slug: pr-reviewer-cannot-modify-main
-description: Antigravity reviews pull requests in disposable git worktrees, and its GitHub module is tested at the AST level to contain no push, merge or other mutation paths.
+description: A threat model for Antigravity, an unattended PR reviewer — per-PR worktrees, an AST-level ban on mutation paths, an evidence gate, and the risk a worktree does not remove.
 publishedAt: 2026-09-25
 tags:
   - Rust
@@ -11,38 +11,37 @@ relatedProjects:
   - antigravity-pr-reviewer
 ---
 
-[Antigravity](/projects/antigravity-pr-reviewer) is a Rust daemon that reviews pull requests on a production NestJS codebase without being asked. It polls GitHub for PRs labelled `review-requested`, checks each one out, runs a five-pass static analysis pipeline, and posts a review with line-anchored comments.
+[Antigravity](/projects/antigravity-pr-reviewer) is a Rust daemon that reviews pull requests on a production NestJS codebase without being asked. It polls GitHub for PRs labelled `review-requested`, filters to the ones still awaiting its review, checks each out, runs five analysis passes — CodeGraph impact analysis, an AST check for tenant isolation, `tsc --noEmit`, ESLint and dependency-cruiser — and submits a GitHub review with line-anchored comments. Reviews run in parallel.
 
-A tool like that needs repository access to work. Its safety architecture answers one question: how to make sure that access can never turn into a change to the repository — not by being careful, but by construction.
+Anything that runs unattended with repository access deserves a threat model before it deserves features. This is that model, and the controls that answer it.
 
-## The problem
+> The Rust below is written for this post to show each technique; Antigravity's own source differs in detail.
 
-An automated reviewer runs unattended, processes PRs in parallel, and executes project tooling (`tsc`, ESLint, dependency-cruiser) inside the code it is reviewing. Two things can go wrong:
+## Assets and trust boundaries
 
-1. **State leaks.** Reviews share a checkout, and one review's state — a modified file, a switched branch, a leftover build artifact — contaminates another, or the main checkout.
-2. **Mutation.** Some code path, now or after a future change, pushes, merges, or otherwise writes to the repository.
+**What must not be harmed:** the repository's refs (above all the main branch), the host checkout the daemon runs from, the GitHub credential it holds, and — less obviously — the team's trust in its comments. A reviewer people learn to ignore has failed even if it never breaks anything.
 
-The first is an isolation problem. The second is a capability problem.
+**What is untrusted:** the contents of every pull request. The daemon checks out code it has never seen and runs tooling against it.
 
-## Isolation: one worktree per PR
+**What is trusted but fallible:** the daemon's own code, today and after every future change to it.
 
-Every PR gets its own `git worktree` at the PR's head commit, in a temporary directory, separate from the main checkout. All five passes run there:
+## Threats and controls
 
-```mermaid
-flowchart LR
-  PR[PR head commit] --> WT[temp worktree]
-  subgraph WT_scope [inside the worktree]
-    A[CodeGraph] --> B[Tenant AST] --> C[tsc] --> D[ESLint] --> E[dependency-cruiser]
-  end
-  WT --> A
-  E --> G{Evidence gate}
-  G --> R[GitHub review]
-  WT -.->|removed on success or failure| X[cleanup]
-```
+| # | Threat | Control |
+| --- | --- | --- |
+| T1 | One review's state leaks into another, or into the host checkout | One `git worktree` per PR, detached at the PR's head commit, in a temp directory |
+| T2 | A failed or panicking review leaves a worktree behind | Worktree lifetime bound to a value; removal runs on every exit path |
+| T3 | The daemon pushes, merges or otherwise mutates the repository — through a bug or a future change | `src/github.rs` may not contain mutation paths; unit tests parse its AST and fail if they appear |
+| T4 | Findings are noisy enough that people stop reading them | Evidence gate: a finding needs a line in the diff; comments are pinned to that line |
+| T5 | Running the PR's own tooling executes code from the PR | **Residual** — see below |
 
-Worktrees are cleaned up after each review **regardless of whether the pipeline succeeds or fails**. In Rust, one way to make "regardless" structural rather than remembered is to tie the worktree's lifetime to a value:
+## T1, T2: isolation that can't be forgotten
 
-```rust title="worktree.sketch.rs"
+Every PR gets its own worktree at its head SHA. All five passes run inside it; the main checkout is never switched, stashed or built. Using `--detach` means the worktree has no branch checked out at all, so there is no local branch that could be pushed from it.
+
+"Cleaned up after every review, whether it succeeds or fails" is the kind of rule that is easy to state and easy to break with one early `return`. In Rust it can be made structural by tying the worktree to a value whose destructor removes it:
+
+```rust title="worktree.rs"
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -55,14 +54,13 @@ impl Worktree {
     pub fn create(repo: &Path, head_sha: &str) -> std::io::Result<Self> {
         let path = std::env::temp_dir().join(format!("review-{head_sha}"));
         let status = Command::new("git")
-            .arg("-C")
-            .arg(repo)
+            .arg("-C").arg(repo)
             .args(["worktree", "add", "--detach"])
             .arg(&path)
             .arg(head_sha)
             .status()?;
         if !status.success() {
-            return Err(std::io::Error::other("git worktree add failed"));
+            return Err(std::io::Error::other(format!("git worktree add failed for {head_sha}")));
         }
         Ok(Self { repo: repo.to_path_buf(), path })
     }
@@ -73,11 +71,10 @@ impl Worktree {
 }
 
 impl Drop for Worktree {
-    // Runs on every exit path: success, early return, `?`, or panic unwinding.
+    // Runs on success, on early return, on `?`, and while unwinding from a panic.
     fn drop(&mut self) {
         let _ = Command::new("git")
-            .arg("-C")
-            .arg(&self.repo)
+            .arg("-C").arg(&self.repo)
             .args(["worktree", "remove", "--force"])
             .arg(&self.path)
             .status();
@@ -85,37 +82,39 @@ impl Drop for Worktree {
 }
 ```
 
-*A sketch of the technique rather than Antigravity's source.* `--detach` is a small but useful detail: the worktree has no branch checked out, so there is no local branch to accidentally push.
+The review function takes the `Worktree` by value or holds it for its whole scope; there is no code path that finishes a review with the directory still registered.
 
-## Capability: prove the mutation paths don't exist
+## T3: prove the mutation paths don't exist
 
-Isolation protects the main checkout from the review. It doesn't stop code from deliberately calling `git push`.
+Isolation keeps the review from damaging the checkout. It doesn't stop code from deliberately calling `git push`.
 
-Antigravity handles that at the module boundary. All GitHub interaction lives in `src/github.rs`, and that file is **architecturally prohibited from containing any `git push`, `git merge` or repository-mutation code path**. The prohibition is enforced by unit tests that **parse the source AST and fail if those patterns appear**.
+All GitHub interaction lives in `src/github.rs`, and that file is **prohibited from containing any `git push`, `git merge` or repository-mutation code path**. The prohibition is a unit test that **parses the file's AST** and fails the build if a banned pattern appears.
 
-Parsing matters. A `grep` for "push" also matches comments and doc text; an AST check looks only at the method calls and string literals the compiler sees. A test in that spirit, using the `syn` crate (features `full` and `visit`):
+Parsing is the point. A `grep` for "push" also matches comments, docs and unrelated identifiers, so it gets loosened until it catches nothing. An AST visitor looks only at the method calls and string literals the compiler sees:
 
-```rust title="tests/no_mutation.sketch.rs"
+```rust title="tests/no_mutation.rs"
 use std::fs;
 use syn::visit::{self, Visit};
 use syn::{ExprMethodCall, LitStr};
 
-const BANNED: &[&str] = &["push", "merge"];
+const BANNED_CALLS: &[&str] = &["push", "merge", "force_push", "delete_ref"];
+const BANNED_GIT_VERBS: &[&str] = &["push", "merge", "rebase", "reset"];
 
 #[derive(Default)]
 struct Findings(Vec<String>);
 
 impl<'ast> Visit<'ast> for Findings {
     fn visit_lit_str(&mut self, lit: &'ast LitStr) {
+        // Catches Command::new("git").args(["push", …]) and similar.
         let value = lit.value();
-        if value.split_whitespace().any(|word| BANNED.contains(&word)) {
-            self.0.push(format!("string literal {value:?}"));
+        if BANNED_GIT_VERBS.contains(&value.as_str()) {
+            self.0.push(format!("git verb literal {value:?}"));
         }
     }
 
     fn visit_expr_method_call(&mut self, call: &'ast ExprMethodCall) {
         let name = call.method.to_string();
-        if BANNED.contains(&name.as_str()) {
+        if BANNED_CALLS.contains(&name.as_str()) {
             self.0.push(format!("method call .{name}()"));
         }
         visit::visit_expr_method_call(self, call);
@@ -128,22 +127,32 @@ fn github_module_has_no_mutation_paths() {
     let file = syn::parse_file(&source).expect("parse src/github.rs");
     let mut findings = Findings::default();
     findings.visit_file(&file);
-    assert!(
-        findings.0.is_empty(),
-        "src/github.rs must not mutate the repository: {:?}",
-        findings.0
-    );
+    assert!(findings.0.is_empty(), "src/github.rs must not mutate the repository: {:?}", findings.0);
 }
 ```
 
-*Illustrative. Antigravity's own tests encode its specific list of prohibited patterns.*
+What this buys is not safety today — a reviewer could establish that by reading the file once. It is that **the next change can't quietly remove it**: a commit that adds a push path to the GitHub module fails CI before it can merge.
 
-The value of this isn't that today's code is safe — a reviewer could check that by reading it. It's that **tomorrow's** code can't quietly become unsafe. A future change that adds a push path fails CI before it can merge.
+The AST test constrains code, not credentials. The real ceiling is the token: it should carry read access to contents and pull requests, and write access only to reviews — so that even a path the test missed has nothing to push with.
 
-## Keeping the output worth reading
+## T4: findings that earn a comment
 
-Safety is half the design; the other half is not being noise. A finding only becomes a comment if it passes the **evidence gate**: it must be anchored to a specific line in a changed file, not a general pattern match. Surviving findings are pinned to exact diff lines through the GitHub Pull Request Review API, and the bot submits a full review — `REQUEST_CHANGES` or `APPROVE` — based on aggregate severity.
+The second failure mode of an automated reviewer is the quiet one: it is technically harmless and routinely ignored.
 
-## What it taught
+Every finding from the five passes goes through an **evidence gate**. It becomes a comment only if it is anchored to a **specific line in a file the PR changed** — not a pattern match somewhere in the repository, not a general observation about a module. Surviving findings are pinned to those exact diff lines through the GitHub Pull Request Review API, and the daemon submits one complete review — `REQUEST_CHANGES` or `APPROVE` — from the aggregate severity, rather than a stream of loose comments.
 
-"The bot is careful" is a statement about behaviour, and behaviour changes with every commit. "The module that talks to GitHub cannot contain a push" is a statement about structure, and a test can hold it in place. For automation with access to things that matter, the second kind of guarantee is the one worth building.
+The tenant-isolation pass shows why the anchor matters. It verifies that every TypeORM repository query **in the changed files** carries an `account_id` scope. A missing scope on a line the PR added is a finding with evidence; a pre-existing pattern three modules away is not this PR's finding, however valid.
+
+## T5: the risk a worktree doesn't remove
+
+Three of the five passes execute the project's own tooling: `tsc`, ESLint and dependency-cruiser. Inside a PR's worktree, that means running **that PR's** configuration. ESLint configs are JavaScript and plugins are packages; a PR that changes them changes what runs.
+
+A worktree isolates git state. It does not isolate a process: the passes run with the daemon's user, filesystem and network. The controls above keep the repository and the host checkout intact; they don't make executing untrusted configuration safe.
+
+What bounds this today is where the daemon runs and what triggers it: it reviews one team's repository, and a review only starts when someone applies the `review-requested` label — a human decision per PR. Making it safe for untrusted contributors would take more:
+
+- run the tooling passes in a container with no network and no credentials, mounting only the worktree;
+- take lint and type-check configuration from the base branch rather than the PR's head;
+- keep the GitHub token out of the tooling processes' environment entirely — only the review-posting step needs it.
+
+That list is the difference between "cannot modify the main branch" and "safe to point at anyone's pull request". The first is what the design guarantees. The second is a separate problem, and naming it is part of the model.

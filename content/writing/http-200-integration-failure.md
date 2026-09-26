@@ -1,7 +1,7 @@
 ---
 title: When HTTP 200 Still Means Your Integration Failed
 slug: http-200-integration-failure
-description: Two silent failures in a GST portal integration — a lowercase b2b that returned empty 200s, and a sync that blanked user remarks — and what they say about trusting success codes.
+description: Four ways a GST portal integration lost or corrupted data while every request succeeded — a case-sensitive parameter, an unechoed field, a delegated rule and an over-broad sum — and how each was closed.
 publishedAt: 2026-09-25
 tags:
   - Integration
@@ -12,87 +12,101 @@ relatedProjects:
 featured: true
 ---
 
-A GST compliance platform's Invoice Management System (IMS) syncs inward supplier invoices from the government's GST portal through a GSP partner API, reconciles them against the local purchase ledger, and lets CA firms accept or reject them in bulk. Two bugs in that sync had something in common: every request succeeded, and the data was still wrong.
+The Invoice Management System (IMS) in a GST compliance platform pulls inward supplier invoices from the government's GST portal through a GSP partner API, matches them against each client's purchase ledger, and lets CA firms accept or reject them in bulk before the numbers flow into GSTR-3B. It is a sync against a system we don't control, with a response contract we only partly know — and the failures that mattered there never produced an error.
 
-## Failure one: `b2b` is not `B2B`
+This post is four of them. None threw, none returned a non-2xx status, and each could change what a CA saw or filed.
 
-The portal expects the section parameter in uppercase: `section=B2B`. The system was sending `section=b2b`.
+> The code below is written for this post to show the shape of each fix. It is not the employer's source, and the SQL uses simplified table names.
 
-Nothing errored. The portal answered **HTTP 200 with an empty result set**, which is indistinguishable from "there is nothing to sync". The consequence was that credit note syncs were silently dropped — all of them.
+## 1. The parameter the portal didn't understand
 
-The fix was to send the uppercase value. The interesting part is why the bug could exist at all.
+Credit notes stopped arriving. Not some of them: all of them.
 
-### Why nothing caught it
+The sync requested each invoice section from the portal with a query parameter. The portal expects the section in uppercase — `section=B2B`, `section=CDNR` — and the system was sending lowercase. The portal's response to a section name it didn't recognise was **HTTP 200 with an empty result set**, which is byte-for-byte what it returns for a period with genuinely no credit notes.
 
-An empty list is a legitimate answer. A client for this API has no way to tell "you asked a valid question and the answer is nothing" from "you asked a question I didn't understand, so here is nothing". The status code carries no information here; only the parameter does.
+That is the whole difficulty. The client has no way to distinguish "valid question, empty answer" from "question I didn't parse, empty answer". Retries don't help, alerts on status codes don't fire, and the sync's own bookkeeping records a successful run with zero rows.
 
-That means the defence has to be on our side of the wire:
+The fix was the uppercase value. The durable part was making the vocabulary impossible to get wrong, in one place:
 
-```ts title="section.sketch.ts"
-// The portal's section names, exactly as it expects them. Using a union instead
-// of a free string makes the lowercase variant a compile error, not an empty 200.
-export type GstSection = 'B2B' | 'CDNR' | 'B2BA' | 'CDNRA';
+```ts title="gst-sections.ts"
+/** Section codes exactly as the portal expects them. Case matters: the portal
+ *  answers an unknown section with 200 and an empty list, not an error. */
+export const GST_SECTIONS = ['B2B', 'CDNR', 'ECOM'] as const;
+export type GstSection = (typeof GST_SECTIONS)[number];
 
-export function sectionParam(section: GstSection): string {
-  return `section=${section}`;
+export function parseSection(input: string): GstSection {
+  if ((GST_SECTIONS as readonly string[]).includes(input)) return input as GstSection;
+  throw new Error(
+    `Unknown GST section "${input}": refusing to send a request the portal would answer with an empty 200`,
+  );
 }
 
-sectionParam('B2B'); // ok
-// sectionParam('b2b'); // Argument of type '"b2b"' is not assignable to parameter of type 'GstSection'.
-```
-
-*A sketch of the pattern, not the production code; the section list is illustrative.*
-
-A type only helps where the value is written in code. Where it arrives from configuration or another service, the same idea becomes validation at the boundary: reject anything that isn't one of the known values before the request is sent.
-
-## Failure two: the sync that erased remarks
-
-The second bug was quieter. CA users type remarks — justifications for accepting or rejecting an invoice — and those remarks are sent to the portal. But the GSP partner API's update and read responses don't carry remarks back.
-
-So on each sync, the system took the portal's version of a record, saw no remarks field, and wrote `null` over the remark the user had typed.
-
-### The general shape
-
-This is a field-ownership bug. A sync that replaces a local record with the remote one assumes the remote side owns every field. Here it didn't: the remark was ours, the portal just didn't echo it.
-
-```mermaid
-flowchart LR
-  Local[Local record<br/>status · amounts · remark] --> Merge{Merge by owner}
-  Remote[Portal record<br/>status · amounts] --> Merge
-  Merge --> Out[status · amounts from portal<br/>remark kept from local]
-```
-
-```ts title="merge.sketch.ts"
-interface ImsRecord {
-  status: string;
-  taxableValue: string;
-  remarks: string | null;
-}
-
-// Fields the portal is authoritative for. Anything else is locally owned and
-// must survive a sync even when the portal response omits it.
-const PORTAL_OWNED = ['status', 'taxableValue'] as const satisfies readonly (keyof ImsRecord)[];
-
-export function mergeFromPortal(local: ImsRecord, remote: Partial<ImsRecord>): ImsRecord {
-  const merged = { ...local };
-  for (const field of PORTAL_OWNED) {
-    if (remote[field] !== undefined) merged[field] = remote[field];
-  }
-  return merged;
+export function inwardInvoicesQuery(gstin: string, period: string, section: GstSection) {
+  return new URLSearchParams({ gstin, period, section });
 }
 ```
 
-*Again a sketch of the pattern. Field names are illustrative.*
+A union type catches the mistake where the value is written in code; `parseSection` catches it where the value arrives from configuration, a job payload or another service. Both push the failure to our side of the wire, where it can be loud.
 
-## What the two bugs share
+## 2. The field the portal didn't return
 
-Both were integrations that reported success while losing data. A few habits would have surfaced them earlier, and are worth having on any third-party sync:
+CA users attach remarks to IMS actions — the justification for rejecting a supplier invoice, or for accepting one with a discrepancy. Those remarks are sent to the portal. But the partner API's update and read responses don't carry remarks back.
 
-- **Treat "empty" as a signal worth looking at.** A sync that suddenly returns zero rows for a category that normally has some is more likely broken than quiet.
-- **Pin request parameters to the provider's exact vocabulary**, including case, in one place.
-- **Write down who owns each field** before writing the sync. If the answer is "both", the merge needs a rule, not an overwrite.
-- **Test against recorded real responses**, not responses shaped the way you expect. The remarks bug only exists because the real response omits a field.
+The sync treated the portal's record as the whole record. On every run it read the remote version, found no remarks field, and wrote `NULL` over the remark the user had typed. Nothing failed; the justification simply disappeared on the next sync.
 
-## What it taught
+This is a field-ownership problem, and it is invisible until you write down who owns each column:
 
-A 200 means the request was well-formed enough for the server to answer. It says nothing about whether you asked the question you meant to ask, or whether you understood the answer. In integrations with systems you don't control, correctness has to be checked on your side of the wire — because the other side will cheerfully tell you everything is fine.
+| Column | Owner | On sync |
+| --- | --- | --- |
+| action status, taxable value, tax amounts | portal | overwrite |
+| supplier GSTIN, invoice number, period | portal (natural key) | match on |
+| remarks | user | never touch |
+| match status (`ORPHAN`, `MARKED_FOR_REVIEW`, …) | our auto-match engine | recompute locally |
+
+With the table in hand, the upsert writes only what the portal owns. In Postgres that is an explicit `SET` list — the columns that aren't named are the ones that survive:
+
+```sql title="ims-upsert.sql"
+INSERT INTO ims_inward_invoice AS cur
+  (client_id, supplier_gstin, invoice_number, invoice_date, period,
+   action_status, taxable_value, igst, cgst, sgst, synced_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+ON CONFLICT (client_id, supplier_gstin, invoice_number, period)
+DO UPDATE SET
+  action_status = EXCLUDED.action_status,
+  taxable_value = EXCLUDED.taxable_value,
+  igst          = EXCLUDED.igst,
+  cgst          = EXCLUDED.cgst,
+  sgst          = EXCLUDED.sgst,
+  synced_at     = EXCLUDED.synced_at;
+  -- remarks and match_status are deliberately absent:
+  -- the portal does not own them, so a sync cannot change them.
+```
+
+In an ORM, this bug usually looks like `repository.save(entityBuiltFromResponse)`. It seems harmless because it is how most syncs start, and it is a write of every mapped column, including the ones the response knows nothing about.
+
+## 3. The rule the portal didn't enforce
+
+The IMS flow includes the portal's ITC-reduction question: accepting an invoice can require declaring a partial reduction of input tax credit, and bill-of-entry records have their own actions. The system had been **delegating save-schema validation to the portal** — forwarding the save and treating the portal as the thing that would say no.
+
+That is the same trust as the first two failures, pointed at rules instead of data. When the flow was wired end to end, validation of the save schema moved to our side, before the request is built, and batches gained **partial-success recovery**: a save the portal only partly applies is reconciled as such, rather than reported as one success or one failure.
+
+A rule the remote side is supposed to enforce is still a rule you own, if a violation of it can reach your data.
+
+## 4. Summing what the portal returned
+
+The last one wasn't the sync itself but what was built on it. GSTR-3B Table 4A(5) and 4A(3) were computed by summing **every** GSTR-2B section. Import credit and ISD credit were already counted in their own rows, so they were counted twice. The request succeeded, the math was right, and the filed number was wrong.
+
+The fix constrained the sum to the sections that belong in that table — `b2b`, `cdnr` and `ecom` — as an explicit allow-list rather than "everything except". A new section appearing in the portal's response now has to be placed deliberately; it can't flow into a tax table by default.
+
+That kind of fix depends on the data being stored in a shape you can query per section. GSTR-2B had originally been stored as a fresh snapshot per sync, which grew without bound and made cross-period questions awkward. It was refactored into an **upserted header plus per-invoice rows keyed on natural keys** — the same keys the portal uses — which is also what made the three-way M9 reconciliation (purchase register vs IMS vs GSTR-2B) possible.
+
+## The four, side by side
+
+| Failure | What it looked like | Where it was fixed |
+| --- | --- | --- |
+| Lowercase section code | Successful sync, zero credit notes | Closed vocabulary, validated before the request |
+| Unechoed remarks | Justifications vanished after the next sync | Column ownership; upsert writes portal-owned fields only |
+| Delegated validation | Correctness depended on the portal saying no | Local save-schema validation; partial-success recovery |
+| Over-broad aggregation | Correct arithmetic, double-counted credit | Section allow-list over per-invoice 2B rows |
+
+What they have in common is where the check has to live. The portal will report success for all four, so the only place any of them can be caught is in the code that builds the request and the code that decides what a response is allowed to overwrite.

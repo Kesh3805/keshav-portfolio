@@ -1,7 +1,7 @@
 ---
 title: How a GST Returns Dashboard Became a Sub-15ms Read
 slug: gst-returns-read-model
-description: GST return status queries went from 3,000ms+ to sub-15ms at peak load by reading a precomputed projection that filing writers keep fresh through domain events.
+description: GST return status queries went from 3,000ms+ to sub-15ms at peak load by reading a precomputed projection that filing writers keep fresh through domain events. Requirements, options and the update path.
 publishedAt: 2026-09-25
 tags:
   - Performance
@@ -15,106 +15,130 @@ featured: true
 
 import ReadModelExplainer from '../../apps/web/src/components/explainers/ReadModelExplainer.astro';
 
+The returns dashboard answers one question for a CA firm: for each client GSTIN and each tax period, where does every return stand? At peak load, the API behind it took **more than 3,000ms** to answer. After the change described here it answers in **under 15ms** at peak. Those are the only two measurements in this document; everything else is the reasoning behind the design.
 
-The platform is a GST compliance product for Indian accounting firms and businesses. One of its busiest screens is the returns dashboard: for a client's GSTIN and a tax period, where does each return stand? That screen is served by a returns read API, and at peak load it took more than 3,000ms to answer.
+> SQL and TypeScript here are written for this post and simplified (table and event names included). They follow the design as built; they are not the employer's source.
 
-After the change described here, the same endpoint answers in under 15ms at peak load. Those two figures are the only measurements in this article. The rest is about why the fix had the shape it did.
+## Context
 
-## The problem
+Return status isn't stored anywhere as such. It is a summary of write-heavy modules with their own lifecycles:
 
-A returns dashboard looks like a read. It is really a summary of several write-heavy systems. Here, the state behind it comes from separate modules with their own lifecycles:
+- **GSTR-1** — outward supplies: draft creation, portal sync, GSTN submission.
+- **GSTR-3B** — the monthly summary return, a state machine of its own, which CAs can also hand-correct tile by tile late in the cycle.
 
-- **GSTR-1** — outward supplies, with draft creation, portal sync and GSTN submission.
-- **GSTR-3B** — the monthly summary return, itself a state machine, stored as one canonical row per `(account, GSTIN, period)`.
+The read path derived status from those sources on every request. So the cost of a dashboard read was the cost of asking each source, for each client and period on screen — and it grew with exactly the load that peaks near filing deadlines.
 
-When status has to be assembled from those sources at the moment someone opens the dashboard, the cost of every read grows with the cost of the sources. And it grows with load: at peak, the endpoint was taking over 3,000ms.
+## Requirements
 
-## Why a cache wasn't the answer
+1. **Freshness after a filing.** A CA who has just filed a GSTR-3B must see it as filed on the next refresh. On a screen people act on, a status that lags by a TTL is worse than a slow one.
+2. **Read cost independent of source cost.** The dashboard should not get slower because GSTR-1 or GSTR-3B got more complex.
+3. **Correctness under retries and reordering.** Whatever keeps the status up to date must tolerate the same change being announced twice, or two changes arriving out of order.
+4. **Rebuildable.** If the stored status is ever wrong, recomputing it from the sources must be possible without special tooling.
 
-The quick fix for a slow read is to cache the response. That trades latency for staleness, and a returns dashboard is exactly where staleness hurts: a CA who has just filed a GSTR-3B needs to see it as filed, not as it was a TTL ago.
+## Options
 
-A cache is also keyed by *requests*. The thing that changes is *filings*. Invalidating a response cache correctly means knowing every request whose answer a filing touched — the same derivation work, moved somewhere harder to test.
+| Option | Freshness | Read cost | Why not / why |
+| --- | --- | --- | --- |
+| Cache the API response (TTL) | Stale for up to a TTL after filing | Low on hit, full on miss | Fails requirement 1. Invalidation is keyed by *requests*, but what changes is *filings*; correct invalidation needs to know every request a filing affects — the derivation, moved somewhere harder to test. |
+| Materialised view, refreshed on a schedule | Stale until next refresh | Low | Same staleness problem, and a full refresh recomputes every row to change one. |
+| **Projection updated by domain events** | Fresh within one event's handling | One indexed row per key | Chosen. Writers announce changes; one row per `(account, GSTIN, period)` is recomputed. |
 
-## The architecture
-
-The fix inverts the direction: instead of the reader asking every source for its state, **the sources tell a projection when they change**.
+The chosen design inverts the direction of the work: instead of the reader asking every source for its state, **the sources tell a projection when they change**.
 
 <ReadModelExplainer />
 
+## Design
+
 ```mermaid
 flowchart LR
-  G1[GSTR-1 writer] -->|source-changed event| H[Projection updater]
-  G3[GSTR-3B writer] -->|source-changed event| H
-  H --> P[(returns status projection)]
-  D[Returns read API] --> P
+  G1[GSTR-1 writer] -->|source-changed| H[Projection updater]
+  G3[GSTR-3B writer] -->|source-changed| H
+  H -->|recompute one row| P[(return status projection)]
+  D[Returns read API] -->|SELECT by key| P
 ```
 
-Three parts:
+### Data model
 
-1. **A projection table** holding the status the dashboard needs, already computed.
-2. **A source-changed domain event**, emitted by the GSTR-1 and GSTR-3B writers whenever they change something the dashboard depends on.
-3. **A thin read path.** The returns read API selects from the projection. It no longer knows how status is derived.
+One row per client GSTIN and period, holding exactly what the dashboard renders:
 
-The shape of the updater, as a simplified sketch — all names here are illustrative:
+```sql title="return-status.sql"
+CREATE TABLE return_status (
+  account_id     uuid        NOT NULL,
+  gstin          char(15)    NOT NULL,
+  period         char(6)     NOT NULL,          -- MMYYYY, as the portal uses it
+  gstr1_status   text        NOT NULL,
+  gstr3b_status  text        NOT NULL,
+  updated_at     timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (account_id, gstin, period)
+);
 
-```ts title="returns-projection.sketch.ts"
-type ReturnsSourceChanged = {
-  type: 'returns.changed';
-  accountId: string;
-  gstin: string;
-  period: string; // e.g. "2026-08"
-};
+-- The dashboard's query: one account, a set of periods.
+CREATE INDEX return_status_account_period ON return_status (account_id, period);
+```
 
-interface ReturnStatusRow {
+The read API becomes a single indexed `SELECT` scoped to the tenant. It no longer knows how status is derived — which is what makes its cost independent of the sources.
+
+### Update path
+
+A writer that changes anything the dashboard depends on emits a source-changed event naming the key it touched. The handler recomputes that one row from the sources of truth and upserts it:
+
+```ts title="return-status.projector.ts"
+export interface ReturnsSourceChanged {
   accountId: string;
   gstin: string;
   period: string;
-  gstr1Status: string;
-  gstr3bStatus: string;
-  updatedAt: Date;
 }
 
-interface ReturnSources {
-  gstr1Status(gstin: string, period: string): Promise<string>;
-  gstr3bStatus(gstin: string, period: string): Promise<string>;
-}
+export class ReturnStatusProjector {
+  constructor(
+    private readonly gstr1: { statusFor(gstin: string, period: string): Promise<string> },
+    private readonly gstr3b: { statusFor(gstin: string, period: string): Promise<string> },
+    private readonly db: { query(sql: string, params: unknown[]): Promise<unknown> },
+  ) {}
 
-interface ProjectionStore {
-  upsert(row: ReturnStatusRow): Promise<void>; // keyed on (accountId, gstin, period)
-}
+  async handle(event: ReturnsSourceChanged): Promise<void> {
+    // Read current state at handling time. The event says *which* row is stale,
+    // never *what* changed — so a duplicate or late event can't apply an old delta.
+    const [gstr1Status, gstr3bStatus] = await Promise.all([
+      this.gstr1.statusFor(event.gstin, event.period),
+      this.gstr3b.statusFor(event.gstin, event.period),
+    ]);
 
-export async function onReturnsSourceChanged(
-  event: ReturnsSourceChanged,
-  sources: ReturnSources,
-  projection: ProjectionStore,
-) {
-  // Recompute one row from the sources of truth. Handling the same event
-  // twice is harmless: the row converges to the same value.
-  const [gstr1Status, gstr3bStatus] = await Promise.all([
-    sources.gstr1Status(event.gstin, event.period),
-    sources.gstr3bStatus(event.gstin, event.period),
-  ]);
-  await projection.upsert({ ...event, gstr1Status, gstr3bStatus, updatedAt: new Date() });
+    await this.db.query(
+      `INSERT INTO return_status (account_id, gstin, period, gstr1_status, gstr3b_status, updated_at)
+       VALUES ($1, $2, $3, $4, $5, now())
+       ON CONFLICT (account_id, gstin, period)
+       DO UPDATE SET gstr1_status  = EXCLUDED.gstr1_status,
+                     gstr3b_status = EXCLUDED.gstr3b_status,
+                     updated_at    = EXCLUDED.updated_at`,
+      [event.accountId, event.gstin, event.period, gstr1Status, gstr3bStatus],
+    );
+  }
 }
 ```
 
-Two properties are worth designing in from the start, whatever the implementation:
+### Why recompute instead of increment
 
-- **Recompute, don't increment.** The handler derives the row from the sources rather than applying a delta, so a duplicated or reordered event can't corrupt it.
-- **Scope the work to one key.** An event names the account, GSTIN and period it affects. The cost of keeping the projection fresh is paid per change, not per read.
+This is the property that satisfies requirements 3 and 4 at once.
 
-## What it costs
+An event that carried a *delta* ("GSTR-3B moved from draft to filed") would have to be applied exactly once and in order; a duplicate would double-apply and a reordered pair would leave the older state on top. An event that only carries a *key* has no such hazard: whenever it is handled, the handler reads the sources as they are now. Two events for the same key, in any order, converge on the same row. Handling an event that was already handled is a no-op in effect.
 
-A read model is not free. It moves cost and risk rather than deleting them:
+The same code path is the rebuild. Recomputing the projection for a period is emitting (or directly calling the handler with) one key per `(account, GSTIN, period)` — no separate backfill logic to keep in sync with the live logic.
 
-- **The event is now a contract.** Any code that changes return state and doesn't emit the source-changed event makes the dashboard wrong, silently. Today the GSTR-1 and GSTR-3B writers emit it; a new writer has to as well.
-- **Freshness becomes a window.** Between a write and its projection update there is a gap. For a status dashboard that is acceptable if the gap is short and bounded. Anything that needs exact state to make a decision should read the source of truth, not the projection.
-- **You need a way to rebuild.** If the projection ever drifts, recomputing it from the sources has to be possible. The recompute-not-increment handler makes that the same code path.
+### Where the event is emitted
 
-## What was measured
+The remaining risk is at the boundary between a writer's transaction and the event. If the event is published before the transaction commits and the transaction rolls back, the handler recomputes from unchanged sources — harmless. If the transaction commits and the process dies before the event is published, that row stays stale until something touches the key again.
 
-Query latency for returns status dropped from **3,000ms+ to sub-15ms at peak load**.
+The recompute design keeps the first case safe for free; the second is the classic dual-write gap. The options for closing it fully are well known — write the event to an outbox table in the same transaction, or periodically sweep recently changed keys — and the rebuild path above is the backstop either way, because any stale row can be corrected by recomputing its key.
 
-## What it taught
+## Prerequisite work
 
-The slow part of a summary screen is rarely the query you're looking at. It's that the screen is asking questions whose answers only change when something is written. Once the writers announce their changes, the question can be answered ahead of time — and the endpoint that used to be the hardest to make fast becomes one of the simplest in the codebase.
+The projection only works if "the GSTR-3B status for this GSTIN and period" is a well-defined thing. It wasn't at first: draft and filed GSTR-3B lived in **separate records**. They were unified into **a single canonical row per `(account, GSTIN, period)`**, migrated with transactional, zero-data-loss scripts, before the read model could key on the same triple.
+
+Late tile corrections are part of the same picture. CAs can hand-correct any GSTR-3B tile without regenerating GSTR-1; that edit path is a writer like any other, and the dashboard is only right if every writer that changes return state participates in the source-changed contract.
+
+## Consequences
+
+- **Read latency:** 3,000ms+ → under 15ms at peak load.
+- **The event is now a contract.** Today the GSTR-1 and GSTR-3B writers emit it. Any new code that changes return state and doesn't emit it makes the dashboard wrong silently — so the list of writers is something to review, not assume.
+- **Freshness is a window, not a guarantee.** Between a commit and its handler finishing there is a gap. For a status dashboard that is acceptable when it is short and bounded; anything that must make a decision on exact state should read the source of truth, not the projection.
