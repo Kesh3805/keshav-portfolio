@@ -1,0 +1,356 @@
+---
+// The homepage hero: who, not what. A pre-rendered identity sequence (PersonalHero in
+// apps/motion) plays once per session and hands off, on its last frame, to this same
+// composition drawn as live SVG/HTML from the shared layout in lib/identity-hero.ts.
+//
+//   first visit, motion allowed  → graphite stage, the sequence plays, then the live frame
+//   return visit / reduced motion / save-data / no media → the live frame straight away
+//
+// The sequence is silent, never loops, and is skippable. Landscape and portrait are two
+// art-directed compositions, not one scaled down.
+import {
+  IDENTITY_COPY,
+  LANDSCAPE,
+  PORTRAIT,
+  stemX,
+  type IdentityLayout,
+} from '../lib/identity-hero';
+import { motionMedia } from '../lib/motion';
+import { href } from '../lib/paths';
+import { site } from '../site.config';
+
+const variants = [
+  { key: 'landscape', layout: LANDSCAPE, media: motionMedia('personal-hero') },
+  { key: 'portrait', layout: PORTRAIT, media: motionMedia('personal-hero-portrait') },
+] as const;
+
+// Every variant must exist for the intro to be offered; otherwise the live frame is the hero.
+const playable = variants.every((v) => v.media.length === 2 && v.media.every((m) => m.webm || m.mp4));
+
+const srcs = (v: (typeof variants)[number]) =>
+  Object.fromEntries(
+    v.media.flatMap((m) => [
+      [`data-webm-${m.theme}`, m.webm],
+      [`data-mp4-${m.theme}`, m.mp4],
+    ]),
+  );
+
+const diamond = (x: number, y: number, w: number, h = w) =>
+  `${x},${y - h} ${x + w},${y} ${x},${y + h} ${x - w},${y}`;
+const pct = (v: number, of: number) => `${((v / of) * 100).toFixed(4)}%`;
+const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.lead);
+---
+
+<section class="identity" aria-labelledby="identity-title" data-identity>
+  <h1 class="sr-only" id="identity-title">{site.name} — systems engineer</h1>
+  <p class="sr-only">{site.headline}</p>
+
+  {
+    variants.map((v) => {
+      const l = v.layout;
+      return (
+        <div
+          class:list={['stage', v.key]}
+          style={`aspect-ratio: ${l.width} / ${l.height}`}
+          data-stage={v.key}
+        >
+          {playable && (
+            <video
+              class="film"
+              muted
+              playsinline
+              preload="none"
+              disablepictureinpicture
+              aria-hidden="true"
+              tabindex="-1"
+              {...srcs(v)}
+            />
+          )}
+          <svg class="frame" viewBox={`0 0 ${l.width} ${l.height}`} aria-hidden="true" focusable="false">
+            <text
+              class="name"
+              x={l.left}
+              y={l.name.baseline}
+              font-size={l.name.size}
+              letter-spacing={`${l.name.tracking}em`}
+            >
+              {IDENTITY_COPY.name}
+            </text>
+            <line class="rule" x1={l.left} x2={l.right} y1={l.rule.y} y2={l.rule.y} />
+            {[...IDENTITY_COPY.name].map((_, i) => (
+              <polygon class="tick" points={diamond(stemX(l, i), l.rule.y + 7, 0.9, 7)} />
+            ))}
+            <polygon class="node" points={diamond(l.right, l.rule.y, 10)} />
+            <text
+              class="role"
+              x={l.left}
+              y={l.role.baseline}
+              font-size={l.role.size}
+              letter-spacing={`${l.role.tracking}em`}
+            >
+              {IDENTITY_COPY.role}
+            </text>
+            {l.thesis.lines.map((line, k) => (
+              <text class="thesis" x={l.left} y={l.thesis.baseline + k * l.thesis.lineHeight} font-size={l.thesis.size}>
+                {k === 0 && lead(l) ? (
+                  <>
+                    <tspan class="lead">{IDENTITY_COPY.lead}</tspan>
+                    {line.slice(IDENTITY_COPY.lead.length)}
+                  </>
+                ) : (
+                  line
+                )}
+              </text>
+            ))}
+          </svg>
+          <div class="ctas" style={`left: ${pct(l.left, l.width)}; top: ${pct(l.ctaTop, l.height)}`}>
+            <a class="btn btn-primary" href={href('/work')}>Explore work</a>
+            <a class="btn" href={href('/writing')}>Read writing</a>
+          </div>
+        </div>
+      );
+    })
+  }
+
+  {playable && (
+    <button type="button" class="skip meta" data-identity-skip>
+      Skip intro
+    </button>
+  )}
+</section>
+
+{
+  playable && (
+    <script is:inline>
+      // Decide before first paint, so the live frame never flashes before the sequence.
+      (() => {
+        const hero = document.querySelector('[data-identity]');
+        const save = navigator.connection && navigator.connection.saveData;
+        let played = false;
+        try {
+          played = sessionStorage.getItem('identity-played') === '1';
+        } catch {
+          /* storage blocked: treat as a first visit */
+        }
+        if (!hero || played || save || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        hero.classList.add('is-intro');
+      })();
+    </script>
+  )
+}
+
+<script>
+  const hero = document.querySelector<HTMLElement>('[data-identity]');
+  if (hero) {
+    const landscape = matchMedia('(min-width: 56.25rem)');
+    let done = !hero.classList.contains('is-intro');
+    let video: HTMLVideoElement | null = null;
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      try {
+        sessionStorage.setItem('identity-played', '1');
+      } catch {
+        /* storage blocked: the sequence may play again next visit */
+      }
+      hero.classList.remove('is-intro');
+      hero.classList.add('is-arrived');
+      video?.pause();
+      cleanup();
+    };
+
+    // Only a blocked autoplay ends the intro here; load and decode failures go through the
+    // error handler (which may retry) or the start timeout.
+    const start = () =>
+      void video?.play().catch((err: DOMException) => err.name === 'NotAllowedError' && finish());
+
+    const onVisibility = () => {
+      if (!video) return;
+      if (document.hidden) video.pause();
+      else start();
+    };
+    const cleanup = () => {
+      document.removeEventListener('themechange', finish);
+      document.removeEventListener('visibilitychange', onVisibility);
+      landscape.removeEventListener('change', finish);
+    };
+
+    if (!done) {
+      const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+      const stage = hero.querySelector<HTMLElement>(`[data-stage="${landscape.matches ? 'landscape' : 'portrait'}"]`);
+      video = stage?.querySelector('video') ?? null;
+      const webm = video?.dataset[`webm${theme === 'light' ? 'Light' : 'Dark'}`];
+      const mp4 = video?.dataset[`mp4${theme === 'light' ? 'Light' : 'Dark'}`];
+      const src = webm && video?.canPlayType('video/webm; codecs="vp9"') ? webm : mp4;
+
+      if (!video || !src) {
+        finish();
+      } else {
+        video.src = src;
+        video.addEventListener('ended', finish, { once: true });
+        // A WebM that fails to decode gets one retry as MP4 before the live frame takes over.
+        video.addEventListener('error', function retry() {
+          if (video && mp4 && video.getAttribute('src') !== mp4) {
+            video.src = mp4;
+            start();
+          } else {
+            video?.removeEventListener('error', retry);
+            finish();
+          }
+        });
+        // If the first frame has not played in time, the live frame takes over.
+        const timeout = setTimeout(finish, 2500);
+        video.addEventListener('playing', () => clearTimeout(timeout), { once: true });
+        start();
+        // Anything that would make the video disagree with the page ends it early.
+        document.addEventListener('themechange', finish);
+        document.addEventListener('visibilitychange', onVisibility);
+        landscape.addEventListener('change', finish);
+        hero.querySelector('[data-identity-skip]')?.addEventListener('click', finish);
+        hero.addEventListener('keydown', (e) => e.key === 'Escape' && finish());
+      }
+    }
+    document.addEventListener('astro:before-swap', () => {
+      video?.pause();
+      cleanup();
+    }, { once: true });
+  }
+</script>
+
+<style>
+  .identity {
+    position: relative;
+    /* Header is sticky above the stage; the stage fits the rest of the first screen. */
+    --room: calc(100svh - 4.75rem);
+  }
+
+  .stage {
+    position: relative;
+    container-type: inline-size;
+    margin-inline: auto;
+    background: var(--bg);
+  }
+
+  .landscape {
+    display: none;
+    width: min(100%, calc(var(--room) * 16 / 9));
+  }
+
+  .portrait {
+    width: min(100%, calc(var(--room) * 4 / 5));
+  }
+
+  @media (min-width: 56.25rem) {
+    .landscape {
+      display: block;
+    }
+
+    .portrait {
+      display: none;
+    }
+  }
+
+  .film,
+  .frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .film {
+    display: none;
+    object-fit: cover;
+  }
+
+  /* The live frame: same coordinates, fonts and colours as the render's last frame. */
+  .name {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    fill: var(--text);
+  }
+
+  .rule {
+    stroke: var(--text-subtle);
+    stroke-width: 1.5;
+  }
+
+  .tick {
+    fill: var(--text-subtle);
+  }
+
+  .node {
+    fill: var(--accent);
+  }
+
+  .role {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    fill: var(--text-muted);
+  }
+
+  .thesis {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    fill: var(--text-muted);
+  }
+
+  .lead {
+    fill: var(--text);
+  }
+
+  .ctas {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .skip {
+    display: none;
+  }
+
+  /* Intro: only the video is on stage; the live frame and the buttons wait for it. */
+  .is-intro .film {
+    display: block;
+  }
+
+  .is-intro .frame,
+  .is-intro .ctas {
+    visibility: hidden;
+  }
+
+  .is-intro .skip {
+    display: block;
+    position: absolute;
+    top: 0.75rem;
+    right: max(1rem, calc((100% - min(100%, var(--room) * 16 / 9)) / 2 + 1rem));
+    padding: 0.25rem 0.5rem;
+    border: 0;
+    background: none;
+    color: var(--text-subtle);
+    cursor: pointer;
+  }
+
+  .is-intro .skip:hover,
+  .is-intro .skip:focus-visible {
+    color: var(--text);
+  }
+
+  /* Hand-off: the frame is identical to the video's last frame, so it simply replaces it;
+     only the buttons, which the film does not contain, arrive. */
+  @media (prefers-reduced-motion: no-preference) {
+    .is-arrived .ctas {
+      animation: cta-in var(--dur-ui) var(--ease-out) both;
+    }
+  }
+
+  @keyframes cta-in {
+    from {
+      opacity: 0;
+      translate: 0 0.5rem;
+    }
+  }
+</style>

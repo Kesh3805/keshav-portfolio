@@ -1,7 +1,7 @@
 ---
-import { ArrowRight } from '@lucide/astro';
 import { getCollection, getEntry, render } from 'astro:content';
 import KeshavMark from '../components/brand/KeshavMark.astro';
+import IdentityHero from '../components/IdentityHero.astro';
 import ProjectCard from '../components/ProjectCard.astro';
 import RoleTimeline from '../components/RoleTimeline.astro';
 import SectionHeader from '../components/SectionHeader.astro';
@@ -21,9 +21,6 @@ const personal = projects.filter((p) => p.data.category === 'personal');
 const hud = projects.flatMap((project) =>
   project.data.metrics.filter((m) => m.highlight).map((metric) => ({ metric, project })),
 );
-
-// Two-tone headline: the claim, then the qualifier.
-const [headlineLead, headlineRest] = site.headline.split(/ (?=and )/);
 
 const [experience] = await getExperience();
 const experienceProjects = experience ? await getProjectsBySlug(experience.data.projects) : [];
@@ -48,31 +45,25 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
 ---
 
 <BaseLayout>
-  <section class="hero grid-backdrop" aria-labelledby="hero-title">
-    <div class="container-page hero-inner">
-      <div class="hero-copy">
+  <IdentityHero />
+
+  <!-- The exploration: the systems the work runs on, below the identity hero. -->
+  <section class="systems grid-backdrop" aria-labelledby="systems-title">
+    <div class="container-page systems-inner">
+      <div class="systems-copy">
         <p class="kicker">
-          <KeshavMark size={16} state="resolve" class="kicker-mark" />
+          <KeshavMark size={16} class="kicker-mark" />
           <span>Software Engineer</span>
           <span class="sep" aria-hidden="true">/</span>
           <span>jpteam · C1X Inc.</span>
         </p>
-        <h1 id="hero-title">
-          <span class="lead">{headlineLead}</span>
-          {headlineRest && <span class="rest"> {headlineRest}</span>}
-        </h1>
+        <h2 id="systems-title">The systems behind the work</h2>
         <p class="lede">
           Production backends for GST compliance, document AI and real-time workflows at work.
           Retrieval gating, content forensics and review tooling on my own time. This site is where
           both get written down.
         </p>
-        <div class="ctas">
-          <a class="btn btn-primary" href={href('/work')}>
-            Explore Work <ArrowRight size={16} aria-hidden="true" />
-          </a>
-          <a class="btn" href={href('/writing')}>Read Writing</a>
-        </div>
-        <!-- One quiet line of ways to reach me, so nothing competes with the two CTAs. -->
+        <!-- One quiet line of ways to reach me. -->
         <ul class="reach" aria-label="Contact">
           {
             site.links.linkedin && (
@@ -272,12 +263,13 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
 </BaseLayout>
 
 <style>
-  .hero {
-    border-bottom: 1px solid var(--line);
+  .systems {
+    position: relative;
+    border-block: 1px solid var(--line);
     padding-bottom: clamp(2.5rem, 6vw, 4rem);
   }
 
-  .hero-inner {
+  .systems-inner {
     display: grid;
     gap: 3rem;
     padding-block: clamp(3rem, 7vw, 5.5rem) clamp(2rem, 4vw, 3rem);
@@ -285,7 +277,7 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
   }
 
   @media (min-width: 60rem) {
-    .hero-inner {
+    .systems-inner {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
     }
   }
@@ -310,25 +302,17 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     color: var(--faint);
   }
 
-  .hero :global(.kicker-mark) {
+  .systems :global(.kicker-mark) {
     color: var(--text);
   }
 
 
-  h1 {
-    font-size: clamp(2.3rem, 5.6vw, 4rem);
+  .systems h2 {
+    font-size: clamp(2rem, 4.4vw, 3.2rem);
     font-weight: 600;
     letter-spacing: -0.042em;
     line-height: 1.02;
     max-width: 17ch;
-  }
-
-  .lead {
-    color: var(--text);
-  }
-
-  .rest {
-    color: color-mix(in srgb, var(--text) 52%, var(--bg));
   }
 
   .lede {
@@ -337,14 +321,6 @@ const hasFocus = (nowRendered?.headings.length ?? 0) > 0;
     font-size: 1.1rem;
     line-height: 1.65;
     color: var(--muted);
-  }
-
-  .ctas {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem 1.1rem;
-    margin-top: 2.1rem;
   }
 
   /* Secondary line: ways to reach me, set in the metadata voice. */
