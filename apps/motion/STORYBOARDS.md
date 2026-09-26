@@ -129,3 +129,57 @@ Timelines are authored on a 30 fps, 16 s story clock (`storyScale` in `packages/
 **Grounding rulings.** Not shown because the source does not document them: a Redis `SET … NX PX` command or campaign IDs, HMAC or header names, a "private" bucket, RRF or reranking for BARA, automatic approval, processing-time figures, and repository / PR / vulnerability counts. The Antigravity cluster does not join the topology: review tooling has no node in the runtime architecture. `apps/web/tests/hero-film.test.ts` enforces these rules against the composition source.
 
 **Structure.** `compositions/SystemsHeroFilm.tsx` (camera, headers, captions) and `compositions/hero/` (`timeline.ts`, one component per act, `ActPreview.tsx`). Acts I–IV are also registered on their own under the `hero-acts` Studio folder for review; they are not rendered by `scripts/render.mjs`.
+
+## PersonalHero
+
+The homepage hero: an 8-second identity sequence about the person, not the projects. It is
+pre-rendered (WebM + MP4, dark and light, landscape 1920×1080 and portrait 1080×1350) and
+hands off to live HTML/SVG in exactly the same positions on its last frame
+(`apps/web/src/lib/identity-hero.ts` is the single layout source for both).
+
+### Identity analysis
+
+|                      | Reading of the existing system                                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Personal identity    | Investigates the problem underneath the system; writes it down. Headline from `site.config.ts`.                            |
+| Typography           | IBM Plex Sans 600 for statements, IBM Plex Mono for notation and the caps signature (`KESHAV`, tracked).                   |
+| Colour               | Graphite `--bg`, off-white `--text`, cyan `--data` for anything that moves or measures, one iris `--accent` for hierarchy. |
+| Shape                | Diamonds (topology plinth tops, the K mark), hairlines, measurement ticks.                                                 |
+| Motion               | Structural = slow cubic; data = linear; typography = sharp expo; identity = springs. Everything plays once.                |
+| Engineering language | Signals, nodes, coordinates, baselines, dimension marks — never dependency names.                                          |
+
+### Directions
+
+|                      | A · Systems thinker                                                            | B · The engineer's desk                                                  | C · Signal / identity                                                   |
+| -------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Idea                 | Scattered points organise into the K, then KESHAV                              | Camera moves across drawings and annotations that collapse into the hero | One signal travels a baseline; the letters exist where it has been      |
+| Originality          | Low here: the systems film already ends with a topology contracting into the K | Medium: easily reads as a mood board or fake UI                          | High: the name is literally derived from a measurement                  |
+| Identity             | Logo-first                                                                     | Workspace-first                                                          | Person-first: the signal is the author                                  |
+| Typography as motion | Late — type follows geometry                                                   | Fragmented, secondary                                                    | Primary — ticks become stems, tracking collapses, caret types the role  |
+| Restraint            | Good                                                                           | Hard: density is the concept                                             | Very good: one moving element for the whole sequence                    |
+| Mobile               | Good                                                                           | Poor: needs depth and width                                              | Good: same idea on a narrower ruler                                     |
+| Memorability         | The K reveal                                                                   | The collapse                                                             | The pause and the hit — six stems opening into KESHAV, then contracting |
+
+**Selected: C.** A repeats the film's ending, B depends on density the brief warns against.
+
+### Reference, used as direction only
+
+Borrowed: a beat grid (120 BPM, a beat is 30 frames), a ruler with ticks as the opening
+tension, hard cuts on beats, a single accent for hierarchy, velocity-driven motion blur,
+a caret for the subtitle, a deliberate held beat before the key hit, bottom-corner frame
+notation. Not borrowed: full-screen colour cuts, blobs, particles, glitch, grain, 3D
+tunnels, the graph-editor scene, any composition or text.
+
+### Scenes (beats at 120 BPM)
+
+| Scene      | Beats | Purpose                           | Composition                                                       | Typography                                                               | Objects                                                    | Camera                          | Transition out                                    |
+| ---------- | ----- | --------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------- | ------------------------------------------------- |
+| 1 Intro    | 0–3   | Tension; precision before content | Empty graphite, a point at the left margin, a ruler drawing right | Frame notation `00 — SIGNAL`, live coordinates                           | Signal point, ruler, minor ticks                           | Still                           | Signal transfer: the point starts to travel       |
+| 2 System   | 3–6   | The system reacts to the signal   | Six columns at wide spacing along the ruler                       | `cap 0.698` dimension note (Plex Mono cap height)                        | Nodes pop, stems rise to cap height as the signal passes   | Slow push to 1.04               | Held beat (6–6.5): nothing moves                  |
+| 3 Identity | 6.5–9 | KESHAV, the major event           | Wide KESHAV → contracted, left-aligned                            | Stems open into letters, tracking collapses on a spring with motion blur | Signal glides to the right end and becomes the accent node | Hard cut back to 1.0 on the hit | Match: nodes shrink into letter ticks on the rule |
+| 4 Role     | 9–11  | Name the role                     | Under the rule, left column                                       | `SYSTEMS ENGINEER` typed by a caret, characters drop 10px into place     | Caret (the signal as a line)                               | Still                           | Signal transfer: the caret drops to the next line |
+| 5 Thesis   | 11–14 | The statement                     | Two lines, left column; right side is negative space              | Caret sweeps and unmasks each line                                       | Caret collapses at the end of line 2                       | Still                           | Frame notation retracts into the corners          |
+| 6 Resolve  | 14–16 | Rest; hand off to HTML            | Final composition                                                 | —                                                                        | Accent node, rule, letter ticks                            | Still                           | Video → identical live HTML/SVG, CTAs arrive      |
+
+Portrait keeps every beat but the columns start at their final spacing (the phone ruler is
+too short for the wide state), so the hit is the stems opening without the contraction.

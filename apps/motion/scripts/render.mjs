@@ -35,6 +35,9 @@ const OUTPUTS = {
   AcfsForensicReport: 'acfs-forensic-report',
   DhvvsProofChain: 'dhvvs-proof-chain',
   SystemsHeroFilm: 'systems-hero-film',
+  // The homepage hero reads these directly (not listed in motion.json).
+  PersonalHero: 'personal-hero',
+  PersonalHeroPortrait: 'personal-hero-portrait',
 };
 const COMPOSITIONS = Object.keys(OUTPUTS);
 const fileName = (id) => OUTPUTS[id];
@@ -73,6 +76,9 @@ for (const id of ids) {
         inputProps,
         timeoutInMilliseconds: 120_000,
         codec: 'vp9',
+        // Frames are full-range JPEG; bt709 converts and tags the video so browsers decode the
+        // background to the page's exact token colour instead of expanding it to black/white.
+        colorSpace: 'bt709',
         crf: 36,
         outputLocation: resolve(out, `${name}.webm`),
         muted: true,
@@ -84,6 +90,7 @@ for (const id of ids) {
         inputProps,
         timeoutInMilliseconds: 120_000,
         codec: 'h264',
+        colorSpace: 'bt709',
         crf: 26,
         pixelFormat: 'yuv420p',
         outputLocation: resolve(out, `${name}.mp4`),

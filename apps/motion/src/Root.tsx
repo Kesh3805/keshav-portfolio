@@ -20,6 +20,12 @@ import {
   SystemsHeroFilm,
   SYSTEMS_HERO_DURATION,
 } from './compositions/SystemsHeroFilm';
+import {
+  PERSONAL_HERO_FRAMES,
+  PersonalHero,
+  PersonalHeroPortrait,
+} from './compositions/PersonalHero';
+import { LANDSCAPE, PORTRAIT } from '../../web/src/lib/identity-hero';
 import { Act1ConcurrencyLock } from './compositions/hero/Act1ConcurrencyLock';
 import { Act2DocumentAiPipeline } from './compositions/hero/Act2DocumentAiPipeline';
 import { Act3M9Reconciliation } from './compositions/hero/Act3M9Reconciliation';
@@ -93,6 +99,25 @@ export function Root() {
         fps={fps}
         width={HERO_WIDTH}
         height={HERO_HEIGHT}
+      />
+      {/* The homepage identity hero is authored on real frames (a 120 BPM beat grid), not the story clock. */}
+      <Composition
+        id="PersonalHero"
+        component={themed(PersonalHero)}
+        defaultProps={{ theme: 'dark' as const }}
+        durationInFrames={PERSONAL_HERO_FRAMES}
+        fps={fps}
+        width={LANDSCAPE.width}
+        height={LANDSCAPE.height}
+      />
+      <Composition
+        id="PersonalHeroPortrait"
+        component={themed(PersonalHeroPortrait)}
+        defaultProps={{ theme: 'dark' as const }}
+        durationInFrames={PERSONAL_HERO_FRAMES}
+        fps={fps}
+        width={PORTRAIT.width}
+        height={PORTRAIT.height}
       />
       <Folder name="hero-acts">
         {heroActs.map(({ id, act, span }) => (
