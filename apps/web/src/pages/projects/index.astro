@@ -68,6 +68,8 @@ const filters = [
 </BaseLayout>
 
 <script>
+  import { matchesFilter } from '../../lib/topology-state';
+
   // Client-side filter; without JS every project is listed and the pills stay hidden.
   const bar = document.querySelector<HTMLElement>('[data-filters]');
   if (bar) {
@@ -78,13 +80,12 @@ const filters = [
 
     const apply = (id: string, sync = true) => {
       const pill = pills.find((p) => p.dataset.filter === id) ?? pills[0]!;
-      const match = pill.dataset.match?.split('|');
+      const match = pill.dataset.match?.split('|') ?? null;
       for (const p of pills) p.setAttribute('aria-pressed', String(p === pill));
 
       let shown = 0;
       for (const card of cards) {
-        const tags = card.dataset.tags?.split('|') ?? [];
-        const visible = !match || tags.some((t) => match.includes(t));
+        const visible = matchesFilter(card.dataset.tags?.split('|') ?? [], match);
         card.hidden = !visible;
         if (visible) shown++;
       }

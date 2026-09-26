@@ -28,6 +28,8 @@ export interface TopologyEdge {
   to: string;
   /** Draw a direction marker (only where the write-ups show a one-way flow). */
   directed: boolean;
+  /** Where the relationship is documented: a pattern that must match that project's write-up. */
+  source: { slug: string; evidence: RegExp };
 }
 
 export const nodes: TopologyNode[] = [
@@ -168,17 +170,72 @@ export const nodes: TopologyNode[] = [
 ];
 
 export const edges: TopologyEdge[] = [
-  { from: 'client', to: 'api', directed: true },
-  { from: 'api', to: 'redis', directed: false },
-  { from: 'api', to: 'mysql', directed: false },
-  { from: 'api', to: 'postgres', directed: false },
-  { from: 'api', to: 'bullmq', directed: false },
-  { from: 'bullmq', to: 'worker', directed: false },
-  { from: 'worker', to: 'ai', directed: false },
-  { from: 'postgres', to: 'memory', directed: false },
-  { from: 'memory', to: 'ai', directed: true },
-  { from: 'api', to: 'sse', directed: true },
-  { from: 'sse', to: 'client', directed: true },
+  {
+    from: 'client',
+    to: 'api',
+    directed: true,
+    source: { slug: 'fintax', evidence: /Web client\] -->\|REST/ },
+  },
+  {
+    from: 'api',
+    to: 'redis',
+    directed: false,
+    source: { slug: 'fintax', evidence: /Modules --> Redis/ },
+  },
+  {
+    from: 'api',
+    to: 'mysql',
+    directed: false,
+    source: { slug: 'groupkart', evidence: /generated from the live production MySQL schema/ },
+  },
+  {
+    from: 'api',
+    to: 'postgres',
+    directed: false,
+    source: { slug: 'fintax', evidence: /--> PG\[\(PostgreSQL/ },
+  },
+  {
+    from: 'api',
+    to: 'bullmq',
+    directed: false,
+    source: { slug: 'dhvvs', evidence: /API --> Q\[\[BullMQ/ },
+  },
+  {
+    from: 'bullmq',
+    to: 'worker',
+    directed: false,
+    source: { slug: 'dhvvs', evidence: /Q --> Fraud\[Fraud scoring worker/ },
+  },
+  {
+    from: 'worker',
+    to: 'ai',
+    directed: false,
+    source: { slug: 'fintax', evidence: /Intake --> Llama\[LlamaIndex Cloud/ },
+  },
+  {
+    from: 'postgres',
+    to: 'memory',
+    directed: false,
+    source: { slug: 'bara', evidence: /PostgreSQL · pgvector/ },
+  },
+  {
+    from: 'memory',
+    to: 'ai',
+    directed: true,
+    source: { slug: 'bara', evidence: /Retrieval --> LLM/ },
+  },
+  {
+    from: 'api',
+    to: 'sse',
+    directed: true,
+    source: { slug: 'fintax', evidence: /API --> Store\[\(durable notification store/ },
+  },
+  {
+    from: 'sse',
+    to: 'client',
+    directed: true,
+    source: { slug: 'fintax', evidence: /Store -->\|SSE stream\| Client/ },
+  },
 ];
 
 /**
@@ -188,6 +245,15 @@ export const edges: TopologyEdge[] = [
 export const signalPath = ['ai', 'worker', 'bullmq', 'api', 'sse', 'client'];
 
 export const nodeById = new Map(nodes.map((n) => [n.id, n]));
+
+/** The emphasised node and its direct neighbours; everything else recedes. */
+export const nearSet = (id: string | null) => new Set(id ? [id, ...neighbours(id)] : []);
+
+/** The detail announced with a topology selection: the node and the projects it appears in. */
+export const selectionDetail = (id: string | null) => ({
+  id,
+  projects: id ? (nodeById.get(id)?.projects.map((p) => p.slug) ?? []) : [],
+});
 
 export const neighbours = (id: string) =>
   edges.filter((e) => e.from === id || e.to === id).map((e) => (e.from === id ? e.to : e.from));

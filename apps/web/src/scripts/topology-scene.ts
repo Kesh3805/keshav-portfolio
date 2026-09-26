@@ -40,21 +40,28 @@ export interface TopologyScene {
   playSignal(): void;
   /** Rendering is allowed only while the canvas is on-screen and the tab is visible. */
   setRunning(running: boolean): void;
+  /** Diagnostics for ?debug=topology (development only). */
+  stats(): {
+    drawCalls: number;
+    triangles: number;
+    raf: 'active' | 'idle';
+    running: boolean;
+    dpr: number;
+  };
   destroy(): void;
 }
 
 interface Options {
   canvas: HTMLCanvasElement;
   labels: Map<string, HTMLElement>;
-  reducedMotion: boolean;
-  parallax: boolean;
+  /** Which motion may run; see topologyMotion() in lib/topology-state. */
+  motion: { signal: boolean; ring: boolean; parallax: boolean };
   onHover(id: string | null): void;
   onPick(id: string): void;
 }
 
 const TILT = (5 * Math.PI) / 180;
 const VIEW = new Vector3(1, 1, 1).normalize();
-const index = new Map(nodes.map((n, i) => [n.id, i]));
 
 /** Colours come from tokens.css; nothing theme-specific is written here. */
 function readTokens() {
@@ -73,7 +80,7 @@ function readTokens() {
 }
 
 export function createTopologyScene(options: Options): TopologyScene {
-  const { canvas, labels, reducedMotion } = options;
+  const { canvas, labels, motion } = options;
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setClearColor(0x000000, 0);
 
@@ -133,11 +140,14 @@ export function createTopologyScene(options: Options): TopologyScene {
   const edgeMaterial = new MeshBasicMaterial({ vertexColors: true, side: DoubleSide });
   scene.add(new Mesh(edgeGeometry, edgeMaterial));
 
-  const worldOf = (id: string, y = 0.02) => {
-    const n = nodes[index.get(id)!]!;
-    const { x, z } = toWorld(n.u, n.v);
-    return new Vector3(x, y, z);
-  };
+  // World positions are fixed; hot paths copy from these instead of allocating.
+  const ground = new Map(
+    nodes.map((n) => {
+      const { x, z } = toWorld(n.u, n.v);
+      return [n.id, new Vector3(x, 0, z)] as const;
+    }),
+  );
+  const worldOf = (id: string, y = 0.02) => ground.get(id)!.clone().setY(y);
 
   function layoutEdges(unitPx: number) {
     const half = 0.65 / unitPx; // ≈ 1.3 CSS px wide on screen
@@ -243,11 +253,12 @@ export function createTopologyScene(options: Options): TopologyScene {
 
   // --- Camera: fixed isometric view, optional ±5° damped inspection tilt.
   const tilt = { x: 0, y: 0, tx: 0, ty: 0 };
+  const AXIS_Y = new Vector3(0, 1, 0);
+  const AXIS_RIGHT = new Vector3(1, 0, -1).normalize();
+  const cameraDir = new Vector3();
   function placeCamera() {
-    const dir = VIEW.clone()
-      .applyAxisAngle(new Vector3(0, 1, 0), tilt.x)
-      .applyAxisAngle(new Vector3(1, 0, -1).normalize(), tilt.y);
-    camera.position.copy(dir.multiplyScalar(DISTANCE));
+    cameraDir.copy(VIEW).applyAxisAngle(AXIS_Y, tilt.x).applyAxisAngle(AXIS_RIGHT, tilt.y);
+    camera.position.copy(cameraDir).multiplyScalar(DISTANCE);
     camera.up.set(0, 1, 0);
     camera.lookAt(0, 0, 0);
     camera.updateMatrixWorld();
@@ -256,18 +267,18 @@ export function createTopologyScene(options: Options): TopologyScene {
   // HTML labels ride along with the tilt so they stay attached to their plinth.
   const rest = new Map<string, Vector2>();
   const scratch = new Vector3();
+  const labelPoint = new Vector2();
   function screenOf(id: string, out: Vector2) {
-    scratch.copy(worldOf(id, 0)).project(camera);
+    scratch.copy(ground.get(id)!).project(camera);
     return out.set(((scratch.x + 1) / 2) * size.w, ((1 - scratch.y) / 2) * size.h);
   }
   function syncLabels() {
-    const p = new Vector2();
     for (const n of nodes) {
       const el = labels.get(n.id);
       const base = rest.get(n.id);
       if (!el || !base) continue;
-      screenOf(n.id, p);
-      el.style.translate = `${(p.x - base.x).toFixed(2)}px ${(p.y - base.y).toFixed(2)}px`;
+      screenOf(n.id, labelPoint);
+      el.style.translate = `${(labelPoint.x - base.x).toFixed(2)}px ${(labelPoint.y - base.y).toFixed(2)}px`;
     }
   }
 
@@ -297,6 +308,8 @@ export function createTopologyScene(options: Options): TopologyScene {
   let ringStart = -1;
   let ringNode = '';
   let signalStart = -1;
+  let signalSeg = -1;
+  const litEdges = new Set<number>();
   const SIGNAL_MS = 1600;
   const RING_MS = 520;
   const pathEdges = signalPath.slice(1).map((to, i) => {
@@ -322,8 +335,7 @@ export function createTopologyScene(options: Options): TopologyScene {
         ringMesh.visible = false;
       } else {
         const eased = 1 - (1 - t) ** 3;
-        const { x, z } = toWorld(nodes[index.get(ringNode)!]!.u, nodes[index.get(ringNode)!]!.v);
-        ringMesh.position.set(x, 0.01, z);
+        ringMesh.position.copy(ground.get(ringNode)!).setY(0.01);
         ringMesh.scale.setScalar(PLINTH.half * (1.5 + eased * 0.9));
         ringMaterial.opacity = 0.7 * (1 - t);
         ringMesh.visible = true;
@@ -342,11 +354,18 @@ export function createTopologyScene(options: Options): TopologyScene {
         const segs = signalPath.length - 1;
         const at = t * segs;
         const seg = Math.min(Math.floor(at), segs - 1);
-        const a = worldOf(signalPath[seg]!, 0.1);
-        const b = worldOf(signalPath[seg + 1]!, 0.1);
-        signalMesh.position.copy(a.lerp(b, at - seg));
+        signalMesh.position
+          .copy(ground.get(signalPath[seg]!)!)
+          .lerp(ground.get(signalPath[seg + 1]!)!, at - seg)
+          .setY(0.1);
         signalMesh.visible = true;
-        paint(new Set(pathEdges.slice(0, seg + 1)));
+        // Recolour only when the signal enters a new edge, not every frame.
+        if (seg !== signalSeg) {
+          signalSeg = seg;
+          litEdges.clear();
+          for (const i of pathEdges.slice(0, seg + 1)) litEdges.add(i);
+          paint(litEdges);
+        }
         busy = true;
       }
     }
@@ -390,7 +409,7 @@ export function createTopologyScene(options: Options): TopologyScene {
       canvas.style.cursor = id ? 'pointer' : '';
       options.onHover(id);
     }
-    if (options.parallax && !reducedMotion && event.pointerType === 'mouse') {
+    if (motion.parallax && event.pointerType === 'mouse') {
       const rect = canvas.getBoundingClientRect();
       tilt.tx = ((event.clientX - rect.left) / rect.width - 0.5) * 2 * TILT;
       tilt.ty = ((event.clientY - rect.top) / rect.height - 0.5) * 2 * TILT * 0.6;
@@ -433,15 +452,25 @@ export function createTopologyScene(options: Options): TopologyScene {
       requestFrame();
     },
     ring(id) {
-      if (reducedMotion) return;
+      if (!motion.ring) return;
       ringNode = id;
       ringStart = performance.now();
       requestFrame();
     },
     playSignal() {
-      if (reducedMotion) return;
+      if (!motion.signal) return;
       signalStart = performance.now();
+      signalSeg = -1;
       requestFrame();
+    },
+    stats() {
+      return {
+        drawCalls: renderer.info.render.calls,
+        triangles: renderer.info.render.triangles,
+        raf: raf ? 'active' : 'idle',
+        running,
+        dpr: renderer.getPixelRatio(),
+      };
     },
     setRunning(next) {
       running = next;

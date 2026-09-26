@@ -23,8 +23,8 @@ export type Props = SeoProps;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#0e1011" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0d10" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f4f2ed" media="(prefers-color-scheme: light)" />
     <meta name="generator" content={Astro.generator} />
     <ThemeScript />
     <link rel="icon" href={href('/favicon.svg')} type="image/svg+xml" />
@@ -54,6 +54,15 @@ export type Props = SeoProps;
           { rootMargin: '0px 0px -6% 0px' },
         );
         blocks.forEach((block) => io.observe(block));
+      }
+
+      // Development-only diagnostics; `import.meta.env.DEV` is false in production builds,
+      // so this branch and the overlay module are removed entirely.
+      if (import.meta.env.DEV) {
+        const mode = new URLSearchParams(location.search).get('debug');
+        if (mode === 'topology' || mode === 'motion') {
+          void import('../scripts/debug-overlay').then((m) => m.mount(mode));
+        }
       }
     </script>
   </body>

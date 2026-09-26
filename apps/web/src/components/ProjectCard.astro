@@ -62,6 +62,8 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
 </article>
 
 <script>
+  import { SELECT_EVENT, cardState, type TopologySelection } from '../lib/topology-state';
+
   // One delegated listener feeds pointer position to whichever card is under the cursor.
   const fine = matchMedia('(hover: hover) and (pointer: fine)');
   let frame = 0;
@@ -82,11 +84,12 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
   );
 
   // The homepage topology announces a selection; matching cards step forward, the rest recede.
-  document.addEventListener('topology:select', (event) => {
-    const { id, projects } = (event as CustomEvent<{ id: string | null; projects: string[] }>).detail;
+  document.addEventListener(SELECT_EVENT, (event) => {
+    const selection = (event as CustomEvent<TopologySelection>).detail;
     for (const card of document.querySelectorAll<HTMLElement>('[data-slug]')) {
-      if (!id) delete card.dataset.topology;
-      else card.dataset.topology = projects.includes(card.dataset.slug!) ? 'match' : 'dim';
+      const state = cardState(card.dataset.slug!, selection);
+      if (state) card.dataset.topology = state;
+      else delete card.dataset.topology;
     }
   });
 </script>

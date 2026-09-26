@@ -207,7 +207,8 @@ const view = nodes.map((n, i) => {
 
 <script>
   import type { TopologyScene } from '../scripts/topology-scene';
-  import { signalPath } from '../lib/topology';
+  import { edges, nearSet, nodes, selectionDetail, signalPath } from '../lib/topology';
+  import { SELECT_EVENT, emphasised, toggleSelection, topologyMotion } from '../lib/topology-state';
 
   const root = document.querySelector<HTMLElement>('[data-topology]');
   if (root) init(root);
@@ -224,6 +225,10 @@ const view = nodes.map((n, i) => {
     );
     const svgEdges = [...svg.querySelectorAll<SVGGElement>('.edge')];
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const motion = topologyMotion({
+      reducedMotion: reduced,
+      finePointer: matchMedia('(hover: hover) and (pointer: fine)').matches,
+    });
 
     let focus: string | null = null; // hover or keyboard focus
     let selected: string | null = null; // click / Enter
@@ -231,8 +236,8 @@ const view = nodes.map((n, i) => {
 
     // --- Emphasis: the node, its connected edges and neighbours; everything else recedes.
     function paint() {
-      const id = focus ?? selected;
-      const near = new Set(id ? [id, ...(labels.get(id)!.dataset.near ?? '').split(' ')] : []);
+      const id = emphasised(focus, selected);
+      const near = nearSet(id);
       root.toggleAttribute('data-emphasis', !!id);
       for (const [key, g] of svgNodes) {
         g.classList.toggle('is-on', key === id);
@@ -267,23 +272,18 @@ const view = nodes.map((n, i) => {
     }
 
     function select(id: string | null) {
-      selected = id && id === selected ? null : id;
+      selected = toggleSelection(selected, id);
       for (const [key, b] of labels) b.setAttribute('aria-pressed', String(key === selected));
-      let slugs: string[] = [];
       for (const body of root.querySelectorAll<HTMLElement>('[data-related]')) {
-        const on = body.dataset.related === selected;
-        body.hidden = !on;
-        if (on) slugs = (body.dataset.projects ?? '').split(' ');
+        body.hidden = body.dataset.related !== selected;
       }
-      document.dispatchEvent(
-        new CustomEvent('topology:select', { detail: { id: selected, projects: slugs } }),
-      );
+      document.dispatchEvent(new CustomEvent(SELECT_EVENT, { detail: selectionDetail(selected) }));
       paint();
       if (selected && signalPath.includes(selected)) replaySignal();
     }
 
     function replaySignal() {
-      if (reduced) return;
+      if (!motion.signal) return;
       if (scene) scene.playSignal();
       else svg.querySelector<SVGAnimationElement>('#topology-signal')?.beginElement();
     }
@@ -338,8 +338,19 @@ const view = nodes.map((n, i) => {
     document.addEventListener('visibilitychange', update);
 
     let loading = false;
+    let fallback = false;
     async function load() {
-      if (!webglAvailable()) return;
+      // Only enhance a hero someone can see: wait for the tab to be visible as well.
+      if (document.hidden) {
+        document.addEventListener('visibilitychange', () => inView && !scene && !loading && load(), {
+          once: true,
+        });
+        return;
+      }
+      if (!webglAvailable()) {
+        fallback = true;
+        return;
+      }
       loading = true;
       // The SVG constructs the system on first paint; the WebGL layer takes over after it settles.
       const settled = new Promise((r) => setTimeout(r, reduced ? 0 : Math.max(0, 3600 - performance.now())));
@@ -348,12 +359,12 @@ const view = nodes.map((n, i) => {
         scene = createTopologyScene({
           canvas,
           labels,
-          reducedMotion: reduced,
-          parallax: matchMedia('(hover: hover) and (pointer: fine)').matches,
+          motion,
           onHover: setFocus,
           onPick: select,
         });
       } catch {
+        fallback = true;
         return; // SVG stays
       }
       paint();
@@ -367,11 +378,28 @@ const view = nodes.map((n, i) => {
       scene = null;
     };
     canvas.addEventListener('webglcontextlost', teardown);
-    addEventListener('pagehide', (event) => {
-      if (event.persisted) return update();
+    const leave = () => {
       io.disconnect();
+      document.removeEventListener('visibilitychange', update);
       teardown();
-    });
+    };
+    addEventListener('pagehide', (event) => (event.persisted ? update() : leave()));
+    document.addEventListener('astro:before-swap', leave, { once: true });
+
+    // Development-only diagnostics (?debug=topology); stripped from production builds.
+    if (import.meta.env.DEV) {
+      (window as Window & { __topology?: () => Record<string, unknown> }).__topology = () => ({
+        nodes: nodes.length,
+        edges: edges.length,
+        webgl: scene ? 'active' : fallback ? 'fallback' : loading ? 'loading' : 'pending',
+        ...(scene?.stats() ?? {}),
+        reducedMotion: reduced,
+        visible: inView,
+        document: document.visibilityState,
+        emphasis: emphasised(focus, selected),
+        selected,
+      });
+    }
   }
 </script>
 
