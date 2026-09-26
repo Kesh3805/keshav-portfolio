@@ -52,8 +52,8 @@ describe('identity hero layout', () => {
 });
 
 describe('identity hero storyboard', () => {
-  it('runs 8 seconds on a 120 BPM grid with contiguous scenes', () => {
-    expect(PERSONAL_HERO_FRAMES).toBe(8 * 60);
+  it('runs 9.5 seconds on a 120 BPM grid with contiguous scenes', () => {
+    expect(PERSONAL_HERO_FRAMES).toBe(9.5 * 60);
     expect(SCENES[0]!.from).toBe(0);
     expect(SCENES.at(-1)!.to).toBe(HERO_BEATS);
     SCENES.slice(1).forEach((s, i) => expect(s.from).toBe(SCENES[i]!.to));
@@ -65,9 +65,16 @@ describe('identity hero storyboard', () => {
     expect(beat(HERO_BEATS) - beat(CUES.chromeOut[1])).toBeGreaterThanOrEqual(30);
   });
 
+  it('morphs the mark into the ruler before the signal travels', () => {
+    expect(CUES.pullBack[1]).toBeLessThanOrEqual(CUES.edges[1]);
+    expect(CUES.collapse[0]).toBeGreaterThan(CUES.edges[1]);
+    expect(CUES.travel[0]).toBeGreaterThanOrEqual(CUES.collapse[1]);
+  });
+
   it('contains no dependency names — the hero is about the person', () => {
     const src = [
       'PersonalHero.tsx',
+      'hero/Mark.tsx',
       'hero/Intro.tsx',
       'hero/Identity.tsx',
       'hero/Typography.tsx',
