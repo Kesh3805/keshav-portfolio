@@ -122,4 +122,32 @@
   --ease-data: linear;
   --ease: var(--ease-ui);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /*
+   * Scroll motion. Distances and steps for everything that responds to scrolling;
+   * components read these rather than their own numbers. Smaller on small screens.
+   *   reveal     entering content: rise distance, and the gap between siblings
+   *   parallax   how far each depth layer drifts across a section's pass, as a
+   *              share of the move (background drifts most, i.e. appears slowest)
+   *   story      pinned storytelling: how tall each step is while its visual holds
+   */
+  --reveal-rise: 16px;
+  --reveal-step: 60ms;
+  --reveal-max: 8;
+  --parallax-bg: 80px;
+  --parallax-mid: 40px;
+  --parallax-fg: 16px;
+  --story-step: 52vh;
+}
+
+@media (max-width: 48rem) {
+  :root {
+    --reveal-rise: 10px;
+    --reveal-step: 40ms;
+    --reveal-max: 5;
+    --parallax-bg: 32px;
+    --parallax-mid: 16px;
+    --parallax-fg: 0px;
+    --story-step: auto;
+  }
 }

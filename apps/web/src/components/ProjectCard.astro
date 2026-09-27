@@ -179,6 +179,13 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
     .card:hover .top::after {
       animation: trace var(--dur-system) var(--ease-data) both;
     }
+
+    /* Entry: when a card grid is revealed, each card's edge traces once, on the same beat as
+       its place in the stagger, so the group arrives as one sequence (then it is static). */
+    :global([data-stagger].is-revealed:not(.reveal-now)) > .card .top::before {
+      animation: trace-in var(--dur-system) var(--ease-data) both;
+      animation-delay: calc(min(var(--i, 0), var(--reveal-max)) * var(--reveal-step) + 220ms);
+    }
   }
 
   .card:focus-within {
@@ -283,6 +290,8 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
     }
   }
 
+  /* ::after is the hover trace, ::before the entry trace; separate so neither blocks the other. */
+  .top::before,
   .top::after {
     content: '';
     position: absolute;
@@ -296,8 +305,25 @@ const posters = preview && motion ? motionMedia(motion).filter((v) => v.poster) 
     pointer-events: none;
   }
 
+  .poster-frame + .top::before,
   .poster-frame + .top::after {
     top: -1.15rem;
+  }
+
+  /* The same trace under a second name, so the entry pass never blocks a later hover pass. */
+  @keyframes trace-in {
+    0% {
+      opacity: 0;
+      background-position: 100% 0;
+    }
+    12%,
+    88% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      background-position: 0 0;
+    }
   }
 
   @keyframes trace {

@@ -30,4 +30,53 @@ const { index, label, id } = Astro.props;
   .index {
     color: var(--accent);
   }
+
+  /* Section to section: as a header enters, its label tightens from wide tracking and a
+     hairline draws beneath it — the hero's ruler, carried through the page. Tied to the
+     header's own pass through the viewport, and finished before it is read. */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .section-header {
+        position: relative;
+        view-timeline: --section block;
+      }
+
+      .section-header::after {
+        content: '';
+        position: absolute;
+        inset: auto 0 -0.8rem;
+        height: 1px;
+        background: linear-gradient(90deg, var(--line-strong), var(--line) 60%, transparent);
+        transform-origin: left;
+        animation-name: section-rule;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --section;
+        /* Measured against the viewport (cover), not the header's own height (entry), so the
+           change spreads over a real stretch of scrolling instead of snapping. */
+        animation-range: entry 0% cover 45%;
+      }
+
+      .section-label {
+        animation-name: section-label;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --section;
+        animation-range: entry 0% cover 35%;
+      }
+    }
+  }
+
+  @keyframes section-rule {
+    from {
+      transform: scaleX(0);
+    }
+  }
+
+  @keyframes section-label {
+    from {
+      letter-spacing: 0.14em;
+      opacity: 0.3;
+    }
+  }
 </style>

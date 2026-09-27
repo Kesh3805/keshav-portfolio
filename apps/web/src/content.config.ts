@@ -25,6 +25,23 @@ const projects = defineCollection({
     order: z.number().int().default(100),
     tags: z.array(tag).default([]),
     motion: motion.optional(),
+    /** Pinned, scroll-driven story for one decision in the case study (components/CaseStory). */
+    story: z
+      .object({
+        title: z.string(),
+        diagram: z.enum(['read-model']),
+        steps: z
+          .array(
+            z.object({
+              state: z.enum(['problem', 'constraint', 'decision', 'architecture', 'result']),
+              label: z.string(),
+              title: z.string(),
+              body: z.string(),
+            }),
+          )
+          .min(2),
+      })
+      .optional(),
     metrics: z
       .array(
         z.object({

@@ -91,6 +91,16 @@ export type Props = SeoProps;
       <slot />
     </main>
     <SiteFooter />
+    <script is:inline>
+      // Anything already on screen at load is shown as it is, not animated in: reveals are
+      // for content that arrives by scrolling. Runs at the end of <body>, before first paint.
+      (() => {
+        const fold = innerHeight;
+        for (const el of document.querySelectorAll('[data-reveal], [data-stagger], [data-diagram]')) {
+          if (el.getBoundingClientRect().top < fold) el.classList.add('is-revealed', 'reveal-now');
+        }
+      })();
+    </script>
     <SearchPalette />
     <ContentScripts />
     <script>
@@ -101,6 +111,16 @@ export type Props = SeoProps;
       //   [data-diagram] a diagram's edges draw in (M8)
       for (const list of document.querySelectorAll<HTMLElement>('[data-stagger]')) {
         [...list.children].forEach((child, i) => (child as HTMLElement).style.setProperty('--i', String(i)));
+      }
+      // Diagrams render later (Mermaid, and again on a theme change): normalise each solid
+      // edge to pathLength 1 as its SVG arrives, so the draw-in is even across edge lengths.
+      for (const diagram of document.querySelectorAll<HTMLElement>('[data-diagram]')) {
+        const normalise = () =>
+          diagram
+            .querySelectorAll('.flowchart-link:not(.edge-pattern-dotted):not([pathLength])')
+            .forEach((edge) => edge.setAttribute('pathLength', '1'));
+        normalise();
+        new MutationObserver(normalise).observe(diagram, { childList: true, subtree: true });
       }
       const blocks = document.querySelectorAll('[data-reveal], [data-stagger], [data-roll], [data-diagram]');
       if (blocks.length) {

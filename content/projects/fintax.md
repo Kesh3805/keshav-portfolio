@@ -4,6 +4,30 @@ slug: fintax
 category: professional
 description: Automated Indian GST compliance, multi-way ledger reconciliation, GSTR-1/3B return filings, and an asynchronous AI-powered invoice extraction pipeline.
 role: Primary Contributor · core domain service & document extraction worker
+story:
+  title: The returns read model, decision by decision
+  diagram: read-model
+  steps:
+    - state: problem
+      label: Problem
+      title: Status was derived on every read
+      body: Return status is not stored anywhere as such — it summarises GSTR-1 and GSTR-3B, each with its own lifecycle. The read path asked both on every request, so a dashboard read cost as much as asking every source, and grew with exactly the load that peaks near filing deadlines. At peak it took 3,000ms+.
+    - state: constraint
+      label: Constraints
+      title: Four requirements the fix had to meet
+      body: Fresh on the next refresh after a filing. Read cost independent of how complex GSTR-1 or GSTR-3B become. Correct when the same change is announced twice or two changes arrive out of order. Rebuildable from the sources without special tooling.
+    - state: decision
+      label: Decision
+      title: Invert the direction of the work
+      body: Instead of the reader asking every source for its state, the sources tell a projection when they change. A cached response with a TTL and a materialised view refreshed on a schedule were both ruled out — each stays stale after a filing.
+    - state: architecture
+      label: Architecture
+      title: The event carries a key; the handler recomputes one row
+      body: The GSTR-1 and GSTR-3B writers emit a source-changed event naming the account, GSTIN and period they touched. The projection updater reads both sources as they are now and upserts that one row; the returns read API selects it by key. Because the event carries no delta, duplicates and reordering converge on the same row — and the same path rebuilds the projection.
+    - state: result
+      label: Result
+      title: 3,000ms+ → under 15ms at peak
+      body: The read is one indexed SELECT scoped to the tenant. The event is now a contract — any writer that changes return state must emit it — and freshness is a short, bounded window rather than a guarantee.
 technologies:
   - NestJS
   - TypeScript

@@ -22,6 +22,7 @@ const { label, caption, before, after } = Astro.props;
 
 <figure class="explainer" data-explainer>
   <div class="panels">
+    <span class="bridge" aria-hidden="true"></span>
     <div class="panel-cell">
       <p class="state meta"><span class="dot bad" aria-hidden="true"></span>{before}</p>
       <slot name="before" />
@@ -240,6 +241,100 @@ const { label, caption, before, after } = Astro.props;
 
   .explainer :global(.job) {
     fill: var(--warning);
+  }
+
+  /* Scroll progression: the reader's pass through the figure moves the emphasis from the
+     state before the decision to the state after it, and the bridge between them lights at
+     the turn. Both panels stay fully readable throughout — this only shifts focus. */
+  .bridge {
+    display: none;
+  }
+
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .explainer {
+        view-timeline: --explainer block;
+      }
+
+      .panels {
+        position: relative;
+      }
+
+      .panel-cell {
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --explainer;
+        animation-range: cover 25% cover 60%;
+      }
+
+      .panel-cell:first-of-type {
+        animation-name: panel-before;
+      }
+
+      .panel-cell:last-of-type {
+        animation-name: panel-after;
+      }
+
+      /* The turn: a short connector between the panels (→ side by side, ↓ stacked). */
+      .bridge {
+        display: block;
+        position: absolute;
+        z-index: 1;
+        left: 50%;
+        top: 50%;
+        width: 1rem;
+        height: 1px;
+        margin: 0 0 0 -0.5rem;
+        background: var(--data);
+        transform-origin: left;
+        animation-name: bridge;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --explainer;
+        animation-range: cover 38% cover 52%;
+      }
+
+      @media (max-width: 40rem) {
+        .bridge {
+          width: 1px;
+          height: 1rem;
+          margin: -0.5rem 0 0;
+          transform-origin: top;
+        }
+      }
+    }
+  }
+
+  @keyframes panel-before {
+    to {
+      opacity: 0.55;
+    }
+  }
+
+  @keyframes panel-after {
+    from {
+      opacity: 0.55;
+    }
+    to {
+      opacity: 1;
+      border-color: color-mix(in srgb, var(--data) 45%, var(--line));
+    }
+  }
+
+  @keyframes bridge {
+    from {
+      scale: 0 1;
+      opacity: 0;
+    }
+  }
+
+  @media (max-width: 40rem) and (prefers-reduced-motion: no-preference) {
+    @keyframes bridge {
+      from {
+        scale: 1 0;
+        opacity: 0;
+      }
+    }
   }
 
   /* Animations run only when JS armed the figure and motion is allowed; the base styles are the final state. */

@@ -3,11 +3,13 @@ import type { MarkdownHeading } from 'astro';
 
 interface Props {
   headings: MarkdownHeading[];
+  /** Entries for sections rendered before the markdown (e.g. a case-study story). */
+  lead?: { slug: string; text: string }[];
   extra?: { slug: string; text: string }[];
 }
 
-const { headings, extra = [] } = Astro.props;
-const items = [...headings.filter((h) => h.depth === 2), ...extra];
+const { headings, lead = [], extra = [] } = Astro.props;
+const items = [...lead, ...headings.filter((h) => h.depth === 2), ...extra];
 ---
 
 {

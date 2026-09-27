@@ -1,0 +1,340 @@
+---
+// Pinned case-study story: the architecture holds still while the explanation beside it
+// moves on — problem, constraints, decision, architecture, result. The diagram's state is
+// the step being read (an IntersectionObserver on a band across the middle of the viewport;
+// no scroll listener, no scroll hijacking — the page scrolls normally).
+//
+// Static first: without JS, or with reduced motion, the diagram shows the final
+// architecture with both figures, the steps read as ordinary text, and nothing is pinned.
+// Every node and edge is the documented design (content/writing/gst-returns-read-model.mdx).
+interface Step {
+  state: 'problem' | 'constraint' | 'decision' | 'architecture' | 'result';
+  label: string;
+  title: string;
+  body: string;
+}
+
+interface Props {
+  id: string;
+  title: string;
+  steps: Step[];
+}
+
+const { id, title, steps } = Astro.props;
+const box = (x: number, y: number, w: number, h = 46) => ({ x, y, w, h, cx: x + w / 2, cy: y + h / 2 });
+const G1 = box(16, 34, 132);
+const G3 = box(16, 218, 132);
+const H = box(208, 126, 150);
+const P = box(412, 126, 150);
+const D = box(606, 126, 118);
+---
+
+<section class="story" aria-labelledby={id} data-story data-state="all">
+  <h2 class="section-label story-title" id={id}>{title}</h2>
+
+  <div class="story-grid">
+    <figure class="story-visual" aria-hidden="true">
+      <svg viewBox="0 0 740 300" focusable="false">
+        <defs>
+          <marker id={`${id}-arrow`} viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path class="head" d="M0 0 L8 4 L0 8 z" />
+          </marker>
+        </defs>
+
+        {/* Before: the read API asks both sources on every request. */}
+        <g class="s-problem s-constraint before">
+          <path class="edge bad" d={`M${D.x} ${D.cy - 10} C 460 20, 300 30, ${G1.x + G1.w + 2} ${G1.cy}`} marker-end={`url(#${id}-arrow)`} pathLength="1" />
+          <path class="edge bad" d={`M${D.x} ${D.cy + 10} C 460 290, 300 280, ${G3.x + G3.w + 2} ${G3.cy}`} marker-end={`url(#${id}-arrow)`} pathLength="1" />
+          <text class="note bad" x="380" y="30" text-anchor="middle">asked on every read</text>
+        </g>
+
+        {/* After: writers announce a key; one row is recomputed; the read API selects it. */}
+        <g class="s-decision s-architecture s-result s-all after">
+          <path class="edge" d={`M${G1.x + G1.w} ${G1.cy} L ${H.x - 2} ${H.cy - 10}`} marker-end={`url(#${id}-arrow)`} pathLength="1" />
+          <path class="edge" d={`M${G3.x + G3.w} ${G3.cy} L ${H.x - 2} ${H.cy + 10}`} marker-end={`url(#${id}-arrow)`} pathLength="1" />
+          <text class="note" x="160" y={H.cy - 34}>source-changed</text>
+        </g>
+        <g class="s-architecture s-result s-all after">
+          <path class="edge" d={`M${H.x + H.w} ${H.cy} L ${P.x - 2} ${P.cy}`} marker-end={`url(#${id}-arrow)`} pathLength="1" />
+          <path class="edge data" d={`M${D.x} ${D.cy} L ${P.x + P.w + 2} ${P.cy}`} marker-end={`url(#${id}-arrow)`} pathLength="1" />
+          <text class="note" x={(H.x + H.w + P.x) / 2} y={P.y - 10} text-anchor="middle">one row</text>
+          <text class="note" x={(P.x + P.w + D.x) / 2} y={P.y - 10} text-anchor="middle">by key</text>
+        </g>
+
+        <g class="node source">
+          <rect x={G1.x} y={G1.y} width={G1.w} height={G1.h} rx="4" />
+          <text x={G1.x + 12} y={G1.y + 20}>GSTR-1</text>
+          <text class="sub s-problem s-constraint" x={G1.x + 12} y={G1.y + 36}>source</text>
+          <text class="sub s-decision s-architecture s-result s-all" x={G1.x + 12} y={G1.y + 36}>writer</text>
+        </g>
+        <g class="node source">
+          <rect x={G3.x} y={G3.y} width={G3.w} height={G3.h} rx="4" />
+          <text x={G3.x + 12} y={G3.y + 20}>GSTR-3B</text>
+          <text class="sub s-problem s-constraint" x={G3.x + 12} y={G3.y + 36}>source</text>
+          <text class="sub s-decision s-architecture s-result s-all" x={G3.x + 12} y={G3.y + 36}>writer</text>
+        </g>
+        <g class="node s-decision s-architecture s-result s-all">
+          <rect x={H.x} y={H.y} width={H.w} height={H.h} rx="4" />
+          <text x={H.x + 12} y={H.y + 20}>Projection updater</text>
+          <text class="sub" x={H.x + 12} y={H.y + 36}>recomputes one row</text>
+        </g>
+        <g class="node data-node s-architecture s-result s-all">
+          <rect x={P.x} y={P.y} width={P.w} height={P.h} rx="4" />
+          <text x={P.x + 12} y={P.y + 20}>Status projection</text>
+          <text class="sub" x={P.x + 12} y={P.y + 36}>one row per key</text>
+        </g>
+        <g class="node api">
+          <rect x={D.x} y={D.y} width={D.w} height={D.h} rx="4" />
+          <text x={D.x + 12} y={D.y + 20}>Read API</text>
+          <text class="sub s-problem s-constraint" x={D.x + 12} y={D.y + 36}>derives status</text>
+          <text class="sub s-decision s-architecture s-result s-all" x={D.x + 12} y={D.y + 36}>SELECT by key</text>
+        </g>
+
+        <g class="s-constraint reqs">
+          <text x="16" y="292">fresh after filing · cost independent of sources · retries &amp; reordering · rebuildable</text>
+        </g>
+        <text class="figure bad s-problem" x="724" y="222" text-anchor="end">3,000ms+ at peak</text>
+        <text class="figure ok s-result s-all" x="724" y="222" text-anchor="end">3,000ms+ → &lt;15ms</text>
+      </svg>
+      <figcaption class="meta story-step-label" aria-hidden="true">
+        {steps.map((s, i) => (
+          <span class={`label-for s-${s.state}`}>
+            {String(i + 1).padStart(2, '0')} · {s.label}
+          </span>
+        ))}
+        <span class="label-for s-all">Architecture as built</span>
+      </figcaption>
+    </figure>
+
+    <ol class="steps">
+      {steps.map((s, i) => (
+        <li class="step" data-step={s.state}>
+          <p class="meta step-label">
+            {String(i + 1).padStart(2, '0')} · {s.label}
+          </p>
+          <h3>{s.title}</h3>
+          <p>{s.body}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<script>
+  const story = document.querySelector<HTMLElement>('[data-story]');
+  if (story && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const steps = [...story.querySelectorAll<HTMLElement>('[data-step]')];
+    let current: HTMLElement | null = null;
+    // The step crossing the reading band is the one being read. The band sits below the
+    // pinned diagram (60–65% down the viewport), so the current step is never under it.
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) if (entry.isIntersecting) current = entry.target as HTMLElement;
+        const top = steps[0]!.getBoundingClientRect().top;
+        // Above the first step the diagram rests on the first state; below the last, on the last.
+        const state = current?.dataset.step ?? (top > innerHeight * 0.6 ? steps[0]!.dataset.step : steps.at(-1)!.dataset.step);
+        story.dataset.state = state!;
+        steps.forEach((s) => s.classList.toggle('is-current', s === current));
+      },
+      { rootMargin: '-60% 0px -35% 0px' },
+    );
+    steps.forEach((s) => io.observe(s));
+    story.classList.add('is-live');
+  }
+</script>
+
+<style>
+  .story {
+    margin-bottom: clamp(3rem, 8vw, 5rem);
+  }
+
+  .story-title {
+    margin-bottom: 1.25rem;
+  }
+
+  .story-visual {
+    margin: 0;
+    padding: 0.9rem 1rem 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--bevel), var(--shadow-1);
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  text {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    fill: var(--text);
+  }
+
+  .sub,
+  .note {
+    font-size: 11px;
+    fill: var(--text-subtle);
+  }
+
+  .reqs text {
+    font-size: 11px;
+    fill: var(--warning);
+  }
+
+  .figure {
+    font-size: 13px;
+  }
+
+  .bad {
+    fill: var(--error);
+  }
+
+  .ok {
+    fill: var(--ok);
+  }
+
+  .node rect {
+    fill: var(--surface-raised);
+    stroke: var(--line-strong);
+  }
+
+  .data-node rect {
+    stroke: var(--data);
+  }
+
+  .edge {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1.4;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+
+  .edge.bad {
+    stroke: var(--error);
+  }
+
+  .edge.data {
+    stroke: var(--data);
+  }
+
+  .head {
+    fill: var(--line-strong);
+  }
+
+  .story-step-label {
+    display: grid;
+    margin-top: 0.4rem;
+    color: var(--data);
+  }
+
+  .label-for {
+    grid-area: 1 / 1;
+    opacity: 0;
+  }
+
+  .steps {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .step h3 {
+    margin: 0.3rem 0 0.4rem;
+    font-size: 1.15rem;
+  }
+
+  .step p:last-child {
+    color: var(--text-muted);
+    line-height: 1.65;
+  }
+
+  .step-label {
+    color: var(--text-subtle);
+  }
+
+  /* ── State: which parts of the diagram belong to the step being read ── */
+  .story :is(.s-problem, .s-constraint, .s-decision, .s-architecture, .s-result, .s-all, .api rect) {
+    transition:
+      opacity var(--dur-ui) var(--ease-ui),
+      stroke var(--dur-ui) var(--ease-ui);
+  }
+
+  .story :is(.s-problem, .s-constraint, .s-decision, .s-architecture, .s-result, .s-all) {
+    opacity: 0;
+  }
+
+  .story :is(.s-decision, .s-architecture, .s-result, .s-all).node {
+    opacity: 0.14;
+  }
+
+  .story[data-state='all'] .s-all,
+  .story[data-state='problem'] .s-problem,
+  .story[data-state='constraint'] .s-constraint,
+  .story[data-state='decision'] .s-decision,
+  .story[data-state='architecture'] .s-architecture,
+  .story[data-state='result'] .s-result {
+    opacity: 1;
+  }
+
+  /* The read API is the thing being fixed: red while it derives status, green once it reads. */
+  .story:is([data-state='problem'], [data-state='constraint']) .api rect {
+    stroke: var(--error);
+  }
+
+  .story:is([data-state='result'], [data-state='all']) .api rect {
+    stroke: var(--ok);
+  }
+
+  /* Pinned layout: the diagram holds while the steps pass beneath it. Wide screens only;
+     on small screens it is an ordinary figure above an ordinary list. */
+  @media (prefers-reduced-motion: no-preference) and (min-width: 48rem) {
+    .story.is-live .story-visual {
+      position: sticky;
+      top: 5.5rem;
+      z-index: 2;
+    }
+
+    .story.is-live .step {
+      min-height: var(--story-step);
+      padding-top: 1rem;
+      opacity: 0.45;
+      transition: opacity var(--dur-ui) var(--ease-ui);
+    }
+
+    .story.is-live .step.is-current {
+      opacity: 1;
+    }
+
+    .story.is-live .step:last-child {
+      min-height: 0;
+      padding-bottom: 2rem;
+    }
+  }
+
+  /* Edges draw on as they become part of the story being read. */
+  @media (prefers-reduced-motion: no-preference) {
+    .story.is-live :is(.before, .after) .edge {
+      stroke-dashoffset: 1;
+      transition: stroke-dashoffset 700ms var(--ease-data);
+    }
+
+    .story.is-live[data-state='problem'] .s-problem .edge,
+    .story.is-live[data-state='constraint'] .s-constraint .edge,
+    .story.is-live[data-state='decision'] .s-decision .edge,
+    .story.is-live[data-state='architecture'] .s-architecture .edge,
+    .story.is-live[data-state='result'] .s-result .edge {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .story :is(.s-problem, .s-constraint, .s-decision, .s-architecture, .s-result, .s-all, .api rect) {
+      transition: none;
+    }
+  }
+</style>

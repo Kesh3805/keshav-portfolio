@@ -66,6 +66,8 @@ const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.
               {...srcs(v)}
             />
           )}
+          {/* The live frame and its buttons move as one layer when the hero exits. */}
+          <div class="live">
           <svg class="frame" viewBox={`0 0 ${l.width} ${l.height}`} aria-hidden="true" focusable="false">
             <text
               class="name"
@@ -113,10 +115,14 @@ const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.
             <a class="btn btn-primary" href={href('/work')}>Explore work</a>
             <a class="btn" href={href('/writing')}>Read writing</a>
           </div>
+          </div>
         </div>
       );
     })
   }
+
+  {/* M4: where the dropping signal lands — the hero's bottom edge, which is the next section's top rule. */}
+  <span class="landing" aria-hidden="true" />
 
   {playable && (
     <>
@@ -280,7 +286,8 @@ const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.
   }
 
   .film,
-  .frame {
+  .frame,
+  .live {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -371,6 +378,82 @@ const lead = (l: IdentityLayout) => l.thesis.lines[0]!.startsWith(IDENTITY_COPY.
       .is-intro .drop {
         display: none;
       }
+    }
+  }
+
+  /* The landing node, at the same x as the accent node: the stage's width and centring, repeated. */
+  .landing {
+    display: none;
+  }
+
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .landing {
+        --sw: min(100%, calc(var(--room) * 4 / 5));
+        --at: 0.9259;
+        display: block;
+        position: absolute;
+        bottom: 0;
+        left: calc(50% - var(--sw) / 2 + var(--sw) * var(--at));
+        width: 9px;
+        height: 9px;
+        margin: 0 0 -4.5px -4.5px;
+        background: var(--data);
+        rotate: 45deg;
+        z-index: 2;
+        animation-name: land;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --identity;
+        animation-range: exit 38% exit 52%;
+      }
+
+      @media (min-width: 56.25rem) {
+        .landing {
+          --sw: min(100%, calc(var(--room) * 16 / 9));
+          --at: 0.9167;
+        }
+      }
+
+      /* Exit: the hero does not reset — its frame drifts at background speed and dims as it
+         leaves, and the name's tracking opens back toward the wide state it resolved from.
+         The film is never on screen by then (the sequence has handed off). */
+      .live {
+        animation-name: hero-exit;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --identity;
+        /* Starts a touch into the exit so the hero is exactly at rest at the top of the page. */
+        animation-range: exit 3% exit 100%;
+      }
+
+      .name {
+        animation-name: name-open;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --identity;
+        animation-range: exit 0% exit 80%;
+      }
+    }
+  }
+
+  @keyframes land {
+    from {
+      scale: 0;
+      opacity: 0;
+    }
+  }
+
+  @keyframes hero-exit {
+    to {
+      translate: 0 var(--parallax-bg);
+      opacity: 0.2;
+    }
+  }
+
+  @keyframes name-open {
+    to {
+      letter-spacing: 0.12em;
     }
   }
 

@@ -4,6 +4,7 @@ import { render } from 'astro:content';
 import KeshavMark from '../../components/brand/KeshavMark.astro';
 import SignalTitle from '../../components/SignalTitle.astro';
 import ScrollRail from '../../components/ScrollRail.astro';
+import CaseStory from '../../components/CaseStory.astro';
 import MetricValue from '../../components/MetricValue.astro';
 import MotionFigure from '../../components/MotionFigure.astro';
 import Toc from '../../components/Toc.astro';
@@ -39,7 +40,7 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
 ---
 
 <BaseLayout title={data.title} description={data.description} ogImage={`projects/${data.slug}`}>
-  <ScrollRail stops=".prose h2[id]" />
+  <ScrollRail stops=".content h2[id]" />
   <article class="container-page project">
     <header class="head">
       <a class="back meta" href={href(data.category === 'professional' ? '/work' : '/projects')}>
@@ -150,11 +151,13 @@ const shared = next ? [...uses(data.slug)].filter((label) => uses(next.data.slug
         <div class="toc-sticky">
           <Toc
             headings={headings}
+            lead={data.story ? [{ slug: 'story', text: data.story.title }] : []}
             extra={related.length ? [{ slug: 'related-writing', text: 'Related Writing' }] : []}
           />
         </div>
       </div>
       <div class="content">
+        {data.story && <CaseStory id="story" title={data.story.title} steps={data.story.steps} />}
         <div class="prose">
           <Content />
         </div>

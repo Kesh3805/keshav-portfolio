@@ -54,14 +54,22 @@ html.theme-transitioning .site-header {
   /* Keyframes rather than transitions, so the children keep their own hover transitions. */
   .js [data-stagger].is-revealed > * {
     animation: stagger-in 440ms var(--ease-out) both;
-    animation-delay: calc(min(var(--i, 0), 8) * 60ms);
+    animation-delay: calc(min(var(--i, 0), var(--reveal-max)) * var(--reveal-step));
+  }
+
+  /* Content that is already on screen when the page loads is never animated in. */
+  .reveal-now,
+  .reveal-now > *,
+  .reveal-now :is(.flowchart-link, .node, .edgeLabel, .edge-pattern-dotted) {
+    transition: none !important;
+    animation: none !important;
   }
 }
 
 @keyframes stagger-in {
   from {
     opacity: 0;
-    translate: 0 10px;
+    translate: 0 var(--reveal-rise);
   }
 }
 
@@ -190,30 +198,104 @@ html.theme-transitioning .pill-bg {
 
   /* M8 — blog and case-study diagrams: solid edges draw along their path once the diagram
      is revealed; nodes settle in. Dotted edges keep their own dash pattern and fade in. */
-  [data-diagram] .flowchart-link:not(.edge-pattern-dotted) {
-    stroke-dasharray: 1600;
+  /* BaseLayout gives each solid edge pathLength="1", so every edge draws over its whole
+     duration whatever its length. Dotted edges keep their own dash pattern. */
+  [data-diagram] .flowchart-link[pathLength]:not(.edge-pattern-dotted) {
+    stroke-dasharray: 1;
     stroke-dashoffset: 0;
   }
 
-  .js [data-diagram]:not(.is-revealed) .flowchart-link:not(.edge-pattern-dotted) {
-    stroke-dashoffset: 1600;
+  .js [data-diagram]:not(.is-revealed) .flowchart-link[pathLength]:not(.edge-pattern-dotted) {
+    stroke-dashoffset: 1;
   }
 
   .js [data-diagram]:not(.is-revealed) :is(.node, .edge-pattern-dotted, .edgeLabel, marker) {
     opacity: 0;
   }
 
-  [data-diagram].is-revealed .flowchart-link:not(.edge-pattern-dotted) {
-    animation: edge-draw 900ms linear both;
-    animation-delay: 240ms;
+  /* Progression: the diagram tells its flow in order — node, edge, node, edge — using the
+     order Mermaid emits them in, which is the order the architecture is written in. */
+  [data-diagram] .node:nth-of-type(1) {
+    --seq: 0;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(1) {
+    --seq: 1;
+  }
+  [data-diagram] .node:nth-of-type(2) {
+    --seq: 2;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(2) {
+    --seq: 3;
+  }
+  [data-diagram] .node:nth-of-type(3) {
+    --seq: 4;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(3) {
+    --seq: 5;
+  }
+  [data-diagram] .node:nth-of-type(4) {
+    --seq: 6;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(4) {
+    --seq: 7;
+  }
+  [data-diagram] .node:nth-of-type(5) {
+    --seq: 8;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(5) {
+    --seq: 9;
+  }
+  [data-diagram] .node:nth-of-type(6) {
+    --seq: 10;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(6) {
+    --seq: 11;
+  }
+  [data-diagram] .node:nth-of-type(7) {
+    --seq: 12;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(7) {
+    --seq: 13;
+  }
+  [data-diagram] .node:nth-of-type(8) {
+    --seq: 14;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(8) {
+    --seq: 15;
+  }
+  [data-diagram] .node:nth-of-type(9) {
+    --seq: 16;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(9) {
+    --seq: 17;
+  }
+  [data-diagram] .node:nth-of-type(10) {
+    --seq: 18;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(10) {
+    --seq: 19;
+  }
+  [data-diagram] .node:nth-of-type(11) {
+    --seq: 20;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(11) {
+    --seq: 21;
+  }
+  [data-diagram] .node:nth-of-type(12) {
+    --seq: 22;
+  }
+  [data-diagram] :is(.flowchart-link, .edgeLabel):nth-of-type(12) {
+    --seq: 23;
+  }
+
+  [data-diagram].is-revealed .flowchart-link[pathLength]:not(.edge-pattern-dotted) {
+    animation: edge-draw 520ms var(--ease-data) both;
+    animation-delay: calc(160ms + var(--seq, 0) * 110ms);
   }
 
   [data-diagram].is-revealed :is(.node, .edge-pattern-dotted, .edgeLabel) {
-    animation: node-settle 360ms var(--ease-out) both;
-  }
-
-  [data-diagram].is-revealed :is(.edge-pattern-dotted, .edgeLabel) {
-    animation-delay: 700ms;
+    animation: node-settle var(--dur-ui) var(--ease-out) both;
+    animation-delay: calc(120ms + var(--seq, 0) * 110ms);
   }
 }
 
@@ -236,7 +318,7 @@ html.theme-transitioning .pill-bg {
 
 @keyframes edge-draw {
   from {
-    stroke-dashoffset: 1600;
+    stroke-dashoffset: 1;
   }
   to {
     stroke-dashoffset: 0;
@@ -254,5 +336,32 @@ html.theme-transitioning .pill-bg {
 @supports (animation-timeline: view()) {
   body {
     timeline-scope: --identity;
+  }
+}
+
+/* Parallax, background layer: the systems section's grid drifts slower than its content.
+   Only the grid moves (a compositor transform); the section clips it. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .grid-backdrop {
+      overflow: clip;
+    }
+
+    .grid-backdrop::before {
+      inset: calc(var(--parallax-bg) * -1) 0;
+      animation-name: backdrop-drift;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: view();
+    }
+  }
+}
+
+@keyframes backdrop-drift {
+  from {
+    translate: 0 calc(var(--parallax-bg) * -1);
+  }
+  to {
+    translate: 0 var(--parallax-bg);
   }
 }
